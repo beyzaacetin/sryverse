@@ -1,433 +1,528 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
-// SRY Monogram SVG Logo
-function SRYLogo({ size = 32, dark = false }) {
-  const color = dark ? '#FAFAF7' : '#12372A'
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text
-        x="20" y="30"
-        fontFamily="'Instrument Serif', Georgia, serif"
-        fontSize="26"
-        fontWeight="700"
-        fill={color}
-        textAnchor="middle"
-        letterSpacing="-1"
-      >SRY</text>
-    </svg>
-  )
-}
-
-// Animated counter hook
-function useCounter(target, duration = 1500, start = false) {
-  const [count, setCount] = useState(0)
-  useEffect(() => {
-    if (!start) return
-    let startTime = null
-    const step = (timestamp) => {
-      if (!startTime) startTime = timestamp
-      const progress = Math.min((timestamp - startTime) / duration, 1)
-      setCount(Math.floor(progress * target))
-      if (progress < 1) requestAnimationFrame(step)
-    }
-    requestAnimationFrame(step)
-  }, [target, duration, start])
-  return count
-}
-
-// Intersection observer hook
-function useInView(threshold = 0.15) {
+/* ── Intersection Observer hook ── */
+function useReveal(threshold = 0.1) {
   const ref = useRef(null)
-  const [inView, setInView] = useState(false)
+  const [visible, setVisible] = useState(false)
   useEffect(() => {
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) setInView(true)
-    }, { threshold })
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true) }, { threshold })
     if (ref.current) obs.observe(ref.current)
     return () => obs.disconnect()
   }, [threshold])
-  return [ref, inView]
+  return [ref, visible]
 }
 
-// Hero system diagram
-function SystemDiagram() {
+/* ── Animated counter hook ── */
+function useCounter(target, active, duration = 1800) {
+  const [val, setVal] = useState(0)
+  useEffect(() => {
+    if (!active) return
+    let start = null
+    const ease = t => t < 0.5 ? 2*t*t : -1+(4-2*t)*t
+    const step = ts => {
+      if (!start) start = ts
+      const p = Math.min((ts - start) / duration, 1)
+      setVal(Math.round(ease(p) * target))
+      if (p < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [active, target, duration])
+  return val
+}
+
+/* ── Cursor-following tilt on product cards ── */
+function useTilt(strength = 8) {
+  const ref = useRef(null)
+  const onMove = useCallback(e => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    const x = (e.clientX - rect.left) / rect.width - 0.5
+    const y = (e.clientY - rect.top) / rect.height - 0.5
+    ref.current.style.transform = `perspective(800px) rotateY(${x * strength}deg) rotateX(${-y * strength}deg) translateZ(4px)`
+  }, [strength])
+  const onLeave = useCallback(() => {
+    if (ref.current) ref.current.style.transform = 'perspective(800px) rotateY(0deg) rotateX(0deg) translateZ(0px)'
+  }, [])
+  return { ref, onMouseMove: onMove, onMouseLeave: onLeave }
+}
+
+/* ── Abstract System Visualization ── */
+function SystemViz() {
   return (
-    <div className="system-diagram" aria-hidden="true">
-      <svg viewBox="0 0 580 420" fill="none" xmlns="http://www.w3.org/2000/svg" className="diagram-svg">
-        {/* Grid dots */}
-        {Array.from({ length: 8 }, (_, i) =>
-          Array.from({ length: 6 }, (_, j) => (
-            <circle key={`${i}-${j}`} cx={40 + i * 72} cy={30 + j * 72} r="1.5" fill="#ADBC9F" opacity="0.5" />
-          ))
-        )}
+    <div className="system-viz" aria-hidden="true">
+      <svg viewBox="0 0 700 500" fill="none" xmlns="http://www.w3.org/2000/svg" className="viz-svg">
+        {/* Subtle grid */}
+        {Array.from({length:10},(_,i)=>Array.from({length:8},(_,j)=>(
+          <circle key={`${i}-${j}`} cx={35+i*70} cy={30+j*62} r="1" fill="#0D3B2E" opacity="0.08"/>
+        )))}
 
-        {/* Flow lines */}
-        <path d="M 80 120 Q 160 80 240 120" stroke="#ADBC9F" strokeWidth="1" fill="none" strokeDasharray="4 4" opacity="0.6" className="flow-line" />
-        <path d="M 240 120 Q 320 80 400 120" stroke="#ADBC9F" strokeWidth="1" fill="none" strokeDasharray="4 4" opacity="0.6" className="flow-line" style={{animationDelay:'0.3s'}} />
-        <path d="M 160 200 L 290 200" stroke="#436850" strokeWidth="1.5" fill="none" opacity="0.4" />
-        <path d="M 290 200 L 420 200" stroke="#436850" strokeWidth="1.5" fill="none" opacity="0.4" />
-        <path d="M 160 200 L 160 300" stroke="#ADBC9F" strokeWidth="1" fill="none" strokeDasharray="3 3" opacity="0.5" />
-        <path d="M 420 200 L 420 300" stroke="#ADBC9F" strokeWidth="1" fill="none" strokeDasharray="3 3" opacity="0.5" />
+        {/* Horizontal layer lines */}
+        <line x1="80" y1="110" x2="620" y2="110" stroke="#0D3B2E" strokeWidth="0.5" opacity="0.15"/>
+        <line x1="80" y1="220" x2="620" y2="220" stroke="#0D3B2E" strokeWidth="0.5" opacity="0.15"/>
+        <line x1="80" y1="330" x2="620" y2="330" stroke="#0D3B2E" strokeWidth="0.5" opacity="0.15"/>
 
-        {/* Data nodes */}
-        <circle cx="80" cy="120" r="6" fill="#12372A" opacity="0.7" />
-        <circle cx="240" cy="120" r="6" fill="#12372A" opacity="0.7" />
-        <circle cx="400" cy="120" r="6" fill="#12372A" opacity="0.7" />
-        <circle cx="520" cy="120" r="4" fill="#ADBC9F" opacity="0.8" />
+        {/* Layer labels */}
+        <text x="40" y="114" fontFamily="'DM Mono',monospace" fontSize="8" fill="#0D3B2E" opacity="0.35" textAnchor="end">GİRDİ</text>
+        <text x="40" y="224" fontFamily="'DM Mono',monospace" fontSize="8" fill="#0D3B2E" opacity="0.35" textAnchor="end">İŞLEM</text>
+        <text x="40" y="334" fontFamily="'DM Mono',monospace" fontSize="8" fill="#0D3B2E" opacity="0.35" textAnchor="end">ÇIKTI</text>
 
-        {/* AI Decision Layer box */}
-        <rect x="220" y="170" width="140" height="60" rx="8" fill="#12372A" opacity="0.08" stroke="#12372A" strokeWidth="1" />
-        <text x="290" y="196" textAnchor="middle" fontFamily="'DM Mono', monospace" fontSize="9" fill="#12372A" fontWeight="500" opacity="0.7">AI DECISION</text>
-        <text x="290" y="212" textAnchor="middle" fontFamily="'DM Mono', monospace" fontSize="9" fill="#12372A" opacity="0.7">LAYER</text>
+        {/* Input nodes */}
+        {[130,260,390,520].map((x,i)=>(
+          <g key={i}>
+            <circle cx={x} cy="110" r="5" fill="#0D3B2E" opacity="0.6"/>
+            <circle cx={x} cy="110" r="10" fill="none" stroke="#0D3B2E" strokeWidth="0.5" opacity="0.2" className={`ring r${i}`}/>
+          </g>
+        ))}
 
-        {/* SkillMatch card */}
-        <rect x="100" y="270" width="160" height="90" rx="10" fill="white" stroke="#E5E7EB" strokeWidth="1.5" />
-        <rect x="100" y="270" width="160" height="6" rx="10" fill="#12372A" />
-        <text x="180" y="302" textAnchor="middle" fontFamily="'Instrument Serif', serif" fontSize="12" fill="#12372A" fontWeight="700">SkillMatch AI</text>
-        <text x="180" y="320" textAnchor="middle" fontFamily="'Inter', sans-serif" fontSize="9" fill="#6B7280">by SRYVERSE</text>
-        <circle cx="125" cy="342" r="3" fill="#436850" opacity="0.6" />
-        <circle cx="138" cy="342" r="3" fill="#436850" opacity="0.4" />
-        <circle cx="151" cy="342" r="3" fill="#436850" opacity="0.3" />
+        {/* Connection lines input → processing */}
+        <path d="M130 115 C 130 165, 210 165, 250 220" stroke="#0D3B2E" strokeWidth="0.75" opacity="0.2" className="flow-path"/>
+        <path d="M260 115 C 260 165, 250 165, 250 220" stroke="#0D3B2E" strokeWidth="0.75" opacity="0.25" className="flow-path" style={{animationDelay:'0.4s'}}/>
+        <path d="M390 115 C 390 165, 370 165, 350 220" stroke="#0D3B2E" strokeWidth="0.75" opacity="0.2" className="flow-path" style={{animationDelay:'0.8s'}}/>
+        <path d="M520 115 C 520 165, 450 165, 450 220" stroke="#0D3B2E" strokeWidth="0.75" opacity="0.25" className="flow-path" style={{animationDelay:'1.2s'}}/>
 
-        {/* EstateMatch card */}
-        <rect x="320" y="270" width="160" height="90" rx="10" fill="white" stroke="#E5E7EB" strokeWidth="1.5" />
-        <rect x="320" y="270" width="160" height="6" rx="10" fill="#436850" />
-        <text x="400" y="302" textAnchor="middle" fontFamily="'Instrument Serif', serif" fontSize="12" fill="#12372A" fontWeight="700">EstateMatch AI</text>
-        <text x="400" y="320" textAnchor="middle" fontFamily="'Inter', sans-serif" fontSize="9" fill="#6B7280">by SRYVERSE</text>
-        <circle cx="345" cy="342" r="3" fill="#ADBC9F" opacity="0.8" />
-        <circle cx="358" cy="342" r="3" fill="#ADBC9F" opacity="0.6" />
-        <circle cx="371" cy="342" r="3" fill="#ADBC9F" opacity="0.4" />
+        {/* AI Core — center processing */}
+        <rect x="180" y="188" width="340" height="64" rx="6" fill="#0D3B2E" opacity="0.04" stroke="#0D3B2E" strokeWidth="0.75"/>
+        <text x="350" y="216" textAnchor="middle" fontFamily="'DM Mono',monospace" fontSize="9" fill="#0D3B2E" opacity="0.5" letterSpacing="0.12em">SRYVERSE</text>
+        <text x="350" y="232" textAnchor="middle" fontFamily="'DM Mono',monospace" fontSize="7" fill="#0D3B2E" opacity="0.3" letterSpacing="0.1em">YAPAY ZEKA KARAR KATMANI</text>
 
-        {/* Label text */}
-        <text x="80" y="108" textAnchor="middle" fontFamily="'DM Mono', monospace" fontSize="8" fill="#6B7280">INPUT</text>
-        <text x="520" y="108" textAnchor="middle" fontFamily="'DM Mono', monospace" fontSize="8" fill="#6B7280">OUTPUT</text>
+        {/* Processing pulse line */}
+        <line x1="200" y1="220" x2="500" y2="220" stroke="#0D3B2E" strokeWidth="1" opacity="0.15" strokeDasharray="3 6" className="pulse-line"/>
 
-        {/* Workflow arrows */}
-        <path d="M 290 230 L 290 265" stroke="#12372A" strokeWidth="1.5" markerEnd="url(#arrow)" opacity="0.5" />
-        <path d="M 245 265 L 195 268" stroke="#ADBC9F" strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
-        <path d="M 335 265 L 395 268" stroke="#ADBC9F" strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
+        {/* Output connections */}
+        <path d="M250 252 C 250 290, 220 290, 200 330" stroke="#0D3B2E" strokeWidth="0.75" opacity="0.2"/>
+        <path d="M350 252 C 350 290, 350 290, 350 330" stroke="#0D3B2E" strokeWidth="1" opacity="0.3"/>
+        <path d="M450 252 C 450 290, 490 290, 500 330" stroke="#0D3B2E" strokeWidth="0.75" opacity="0.2"/>
 
-        <defs>
-          <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-            <path d="M 0 0 L 8 4 L 0 8 z" fill="#12372A" opacity="0.5" />
-          </marker>
-        </defs>
+        {/* Output nodes — product icons */}
+        {/* SkillMatch */}
+        <rect x="130" y="320" width="140" height="54" rx="5" fill="white" stroke="#0D3B2E" strokeWidth="0.75" opacity="0.3"/>
+        <rect x="130" y="320" width="140" height="4" rx="5" fill="#0D3B2E" opacity="0.6"/>
+        <text x="200" y="348" textAnchor="middle" fontFamily="'Cormorant Garamond',serif" fontSize="11" fill="#0D3B2E" opacity="0.8" fontWeight="500">SkillMatch AI</text>
+        <text x="200" y="363" textAnchor="middle" fontFamily="'DM Mono',monospace" fontSize="7" fill="#0D3B2E" opacity="0.35" letterSpacing="0.06em">by SRYVERSE</text>
 
-        {/* Pulse circles */}
-        <circle cx="290" cy="200" r="4" fill="#12372A" opacity="0.8" className="pulse-dot" />
-        <circle cx="290" cy="200" r="12" fill="none" stroke="#12372A" strokeWidth="1" opacity="0.2" className="pulse-ring" />
+        {/* Copilot */}
+        <rect x="280" y="320" width="140" height="54" rx="5" fill="#0D3B2E" opacity="0.05" stroke="#0D3B2E" strokeWidth="0.75"/>
+        <rect x="280" y="320" width="140" height="4" rx="5" fill="#0D3B2E" opacity="0.2"/>
+        <text x="350" y="348" textAnchor="middle" fontFamily="'Cormorant Garamond',serif" fontSize="11" fill="#0D3B2E" opacity="0.5" fontWeight="500">SRYVERSE Copilot</text>
+        <text x="350" y="363" textAnchor="middle" fontFamily="'DM Mono',monospace" fontSize="7" fill="#0D3B2E" opacity="0.25" letterSpacing="0.06em">YAKINDA</text>
+
+        {/* EstateMatch */}
+        <rect x="430" y="320" width="140" height="54" rx="5" fill="white" stroke="#0D3B2E" strokeWidth="0.75" opacity="0.3"/>
+        <rect x="430" y="320" width="140" height="4" rx="5" fill="#124734" opacity="0.6"/>
+        <text x="500" y="348" textAnchor="middle" fontFamily="'Cormorant Garamond',serif" fontSize="11" fill="#0D3B2E" opacity="0.8" fontWeight="500">EstateMatch AI</text>
+        <text x="500" y="363" textAnchor="middle" fontFamily="'DM Mono',monospace" fontSize="7" fill="#0D3B2E" opacity="0.35" letterSpacing="0.06em">by SRYVERSE</text>
+
+        {/* Center dot pulse */}
+        <circle cx="350" cy="220" r="3.5" fill="#0D3B2E" opacity="0.7" className="center-pulse"/>
+        <circle cx="350" cy="220" r="8" fill="none" stroke="#0D3B2E" strokeWidth="0.75" opacity="0.15" className="center-ring"/>
+        <circle cx="350" cy="220" r="16" fill="none" stroke="#0D3B2E" strokeWidth="0.5" opacity="0.07" className="center-ring2"/>
       </svg>
     </div>
   )
 }
 
+/* ── Intelligence Timeline ── */
+function IntelligenceLayer() {
+  const [tRef, tVisible] = useReveal(0.2)
+  const steps = [
+    { id: '01', tr: 'Gözlemle', en: 'Observe', desc: 'Gerçek iş akışını anla. Veriyi değil, süreci ölç.' },
+    { id: '02', tr: 'Modelle', en: 'Model', desc: 'Süreçleri ölçülebilir veri yapılarına dönüştür.' },
+    { id: '03', tr: 'Optimize Et', en: 'Optimize', desc: 'Darboğazları ve karar noktalarını tespit et.' },
+    { id: '04', tr: 'Otomatize', en: 'Automate', desc: 'Tekrarlayan kararları yapay zekaya devret.' },
+    { id: '05', tr: 'Ölçeklendir', en: 'Scale', desc: 'Ürünleştirilmiş SaaS sistemi olarak deploy et.' },
+  ]
+  return (
+    <div ref={tRef} className={`intelligence-track ${tVisible ? 'revealed' : ''}`}>
+      {steps.map((s, i) => (
+        <div key={s.id} className="track-step" style={{ transitionDelay: `${i * 0.1}s` }}>
+          <div className="track-step__id">{s.id}</div>
+          <div className="track-step__bar">
+            <div className="track-step__fill" style={{ width: `${100 - i * 10}%`, transitionDelay: `${i * 0.12 + 0.3}s` }}></div>
+          </div>
+          <div className="track-step__text">
+            <span className="track-step__tr">{s.tr}</span>
+            <span className="track-step__en">{s.en}</span>
+          </div>
+          <p className="track-step__desc">{s.desc}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ── Product Card ── */
+function ProductCard({ product }) {
+  const tilt = useTilt(6)
+  return (
+    <div className={`product-card product-card--${product.key}`} {...tilt}>
+      <div className="product-card__top">
+        <div className="product-card__status">
+          <span className={`status-dot ${product.live ? 'status-dot--live' : ''}`}></span>
+          <span>{product.live ? 'Aktif' : 'Yakında'}</span>
+        </div>
+        <div className="product-card__meta">
+          <h3 className="product-card__name">{product.name}</h3>
+          <span className="product-card__by">by SRYVERSE</span>
+        </div>
+      </div>
+      <p className="product-card__desc">{product.desc}</p>
+      <ul className="product-card__features">
+        {product.features.map(f => <li key={f}>{f}</li>)}
+      </ul>
+      <div className="product-card__footer">
+        {product.live
+          ? <a href={product.url} className="product-cta" target="_blank" rel="noopener noreferrer">Ürünü Aç <span>→</span></a>
+          : <button className="product-cta product-cta--ghost">Bekleme Listesi <span>→</span></button>
+        }
+      </div>
+    </div>
+  )
+}
+
+/* ── Metric ── */
+function Metric({ value, suffix, label, active }) {
+  const count = useCounter(value, active)
+  return (
+    <div className="metric">
+      <div className="metric__value">{count}{suffix}</div>
+      <div className="metric__label">{label}</div>
+    </div>
+  )
+}
+
+/* ── Contact Form ── */
+function ContactForm() {
+  const [sent, setSent] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const submit = e => {
+    e.preventDefault()
+    setLoading(true)
+    setTimeout(() => { setLoading(false); setSent(true) }, 1000)
+  }
+  if (sent) return (
+    <div className="form-sent">
+      <div className="form-sent__check">✓</div>
+      <p className="form-sent__title">Mesajınız alındı.</p>
+      <p className="form-sent__sub">24 saat içinde size dönüş yapacağız.</p>
+    </div>
+  )
+  return (
+    <form className="cform" onSubmit={submit}>
+      <div className="cform__row">
+        <div className="cform__field"><label>Ad Soyad</label><input type="text" placeholder="Adınız" required /></div>
+        <div className="cform__field"><label>Şirket</label><input type="text" placeholder="Şirket adı" required /></div>
+      </div>
+      <div className="cform__field"><label>E-posta</label><input type="email" placeholder="isim@sirket.com" required /></div>
+      <div className="cform__field">
+        <label>İlgilendiğiniz Ürün</label>
+        <select required defaultValue="">
+          <option value="" disabled>Seçiniz</option>
+          <option>SkillMatch AI</option>
+          <option>EstateMatch AI</option>
+          <option>SRYVERSE Copilot</option>
+          <option>Özel çözüm</option>
+        </select>
+      </div>
+      <div className="cform__field"><label>Mesaj</label><textarea rows="4" placeholder="İş sürecinizi veya dönüştürmek istediğiniz operasyonu anlatın..." required></textarea></div>
+      <button type="submit" className={`cform__btn ${loading ? 'cform__btn--loading' : ''}`} disabled={loading}>
+        {loading ? 'Gönderiliyor...' : 'Demo Talep Et →'}
+      </button>
+    </form>
+  )
+}
+
+/* ══════════════════════════════════════════
+   MAIN APP
+══════════════════════════════════════════ */
 export default function App() {
+  const [scrollY, setScrollY] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const [metricsRef, metricsInView] = useInView(0.3)
+  const [metricsRef, metricsVisible] = useReveal(0.3)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', onScroll)
+    const onScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  const products = [
+    {
+      key: 'skill',
+      name: 'SkillMatch AI',
+      live: true,
+      url: 'https://skillmatch.sryverse.com',
+      desc: 'CV analizi, aday eşleştirme ve mülakat zekasıyla işe alım süreçlerini uçtan uca dönüştüren yapay zeka platformu.',
+      features: ['AI CV Analizi', 'LLM Aday Eşleştirme', 'Mülakat Kopilosu', 'Yetenek Havuzu', 'İşe Alım Analitiği'],
+    },
+    {
+      key: 'estate',
+      name: 'EstateMatch AI',
+      live: true,
+      url: 'https://estate.sryverse.com',
+      desc: 'Gayrimenkul portföyünü yöneten, müşteri ihtiyaçlarıyla ilanları eşleştiren ve dağınık verileri akıllı önerilere dönüştüren AI platformu.',
+      features: ['Akıllı Mülk Eşleştirme', 'Portföy Yönetimi', 'AI İlan Asistanı', 'Müşteri Zekası', 'Satış Pipeline'],
+    },
+    {
+      key: 'copilot',
+      name: 'SRYVERSE Copilot',
+      live: false,
+      url: null,
+      desc: 'İş ekipleri için analitik, operasyon ve karar desteğini tek bir akıllı arayüzde birleştiren AI asistan katmanı.',
+      features: ['BI Kopilosu', 'İK Kopilosu', 'Sözleşme AI', 'İş Akışı Otomasyonu'],
+    },
+  ]
+
+  const navItems = [
+    { label: 'Ürünler', href: '#products' },
+    { label: 'Zeka Katmanı', href: '#intelligence' },
+    { label: 'Dönüşüm', href: '#transformation' },
+    { label: 'Vizyon', href: '#vision' },
+    { label: 'İletişim', href: '#contact' },
+  ]
+
   return (
-    <div className="app">
-      {/* HEADER */}
-      <header className={`header ${scrolled ? 'header--scrolled' : ''}`}>
-        <div className="container header__inner">
-          <a href="#" className="logo" aria-label="SRYVERSE home">
-            <div className="logo__mark">
-              <SRYLogo size={36} />
-            </div>
-            <span className="logo__name">SRYVERSE</span>
+    <div className="site">
+
+      {/* ── HEADER ── */}
+      <header className={`header ${scrollY > 30 ? 'header--solid' : ''}`}>
+        <div className="header__inner">
+          <a href="/" className="header__logo" aria-label="SRYVERSE">
+            <img src="/sryverse-logo.png" alt="SRYVERSE" className="header__logo-img" />
           </a>
-
-          <nav className={`nav ${menuOpen ? 'nav--open' : ''}`} aria-label="Main navigation">
-            <a href="#products" className="nav__link" onClick={() => setMenuOpen(false)}>Products</a>
-            <a href="#intelligence" className="nav__link" onClick={() => setMenuOpen(false)}>Intelligence Layer</a>
-            <a href="#transformation" className="nav__link" onClick={() => setMenuOpen(false)}>Solutions</a>
-            <a href="#vision" className="nav__link" onClick={() => setMenuOpen(false)}>Vision</a>
-            <a href="#contact" className="nav__link" onClick={() => setMenuOpen(false)}>Contact</a>
+          <nav className={`header__nav ${menuOpen ? 'header__nav--open' : ''}`}>
+            {navItems.map(n => (
+              <a key={n.label} href={n.href} className="header__nav-link" onClick={() => setMenuOpen(false)}>{n.label}</a>
+            ))}
           </nav>
-
           <div className="header__actions">
-            <a href="#products" className="btn btn--ghost">Launch Products</a>
-            <a href="#contact" className="btn btn--primary">Request Demo</a>
+            <a href="#products" className="hbtn hbtn--ghost">Ürünleri Keşfet</a>
+            <a href="#contact" className="hbtn hbtn--solid">Demo Al</a>
           </div>
-
-          <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
-            <span></span><span></span><span></span>
+          <button className={`burger ${menuOpen ? 'burger--open' : ''}`} onClick={() => setMenuOpen(!menuOpen)} aria-label="Menü">
+            <span/><span/><span/>
           </button>
         </div>
       </header>
 
       <main>
-        {/* HERO */}
+
+        {/* ── HERO ── */}
         <section className="hero">
-          <div className="container hero__inner">
-            <div className="hero__content fade-in">
-              <div className="eyebrow">
-                <span className="eyebrow__dot"></span>
-                AI Products · Digital Transformation
+          <div className="hero__bg-lines" aria-hidden="true">
+            {[...Array(6)].map((_,i) => <div key={i} className="hero__bg-line"/>)}
+          </div>
+          <div className="hero__inner wrap">
+            <div className="hero__content">
+              <div className="hero__eyebrow">
+                <span className="eyebrow-dot"/>
+                Endüstri Mühendisliği × Yapay Zeka Mühendisliği
               </div>
-              <h1 className="hero__headline">
-                AI Products for<br />
-                <em>Operational Intelligence</em>
+              <h1 className="hero__h1">
+                Karmaşıklıktan<br/>
+                <em>Akıllı Sistemlere.</em>
               </h1>
-              <p className="hero__sub">Where industrial engineering meets artificial intelligence.</p>
-              <p className="hero__desc">
-                SRYVERSE builds intelligent software products that transform complex business processes into scalable, automated and data-driven systems.
+              <p className="hero__sub">
+                SRYVERSE, parçalanmış iş akışlarını ölçeklenebilir yapay zeka ürünlerine dönüştüren operasyonel zeka sistemleri tasarlar.
               </p>
-              <div className="hero__cta">
-                <a href="#products" className="btn btn--primary btn--lg">Explore Products</a>
-                <a href="#contact" className="btn btn--outline btn--lg">Request Demo</a>
+              <div className="hero__ctas">
+                <a href="#products" className="cta cta--primary">Ekosistemi Keşfet</a>
+                <a href="#contact" className="cta cta--text">Demo Talep Et <span className="cta__arrow">→</span></a>
+              </div>
+              <div className="hero__proof">
+                <div className="hero__proof-item">
+                  <span className="hero__proof-num">2</span>
+                  <span className="hero__proof-label">Aktif AI Ürünü</span>
+                </div>
+                <div className="hero__proof-divider"/>
+                <div className="hero__proof-item">
+                  <span className="hero__proof-num">10+</span>
+                  <span className="hero__proof-label">Otomatize İş Akışı</span>
+                </div>
+                <div className="hero__proof-divider"/>
+                <div className="hero__proof-item">
+                  <span className="hero__proof-num">100K+</span>
+                  <span className="hero__proof-label">Hazır Kayıt</span>
+                </div>
               </div>
             </div>
-            <div className="hero__visual fade-in" style={{ animationDelay: '0.2s' }}>
-              <SystemDiagram />
+            <div className="hero__viz">
+              <SystemViz />
+            </div>
+          </div>
+          <div className="hero__scroll-hint" aria-hidden="true">
+            <div className="scroll-line"/>
+          </div>
+        </section>
+
+        {/* ── STATEMENT ── */}
+        <section className="statement">
+          <div className="wrap">
+            <div className="statement__inner">
+              <p className="statement__text">
+                Operasyonlar sistem olur.<br/>
+                Sistemler ürün olur.<br/>
+                <em>Ürünler ekosistem olur.</em>
+              </p>
+              <div className="statement__line"/>
             </div>
           </div>
         </section>
 
-        {/* INTELLIGENCE LAYER */}
+        {/* ── INTELLIGENCE LAYER ── */}
         <section className="section" id="intelligence">
-          <div className="container">
-            <div className="section__header fade-up">
-              <span className="label">Intelligence Layer</span>
-              <h2 className="section__title">From process complexity<br />to intelligent systems.</h2>
-              <p className="section__desc">Every SRYVERSE product is designed with an industrial engineering mindset and powered by AI engineering.</p>
+          <div className="wrap">
+            <div className="section__header" data-align="left">
+              <span className="eyebrow-label">Metodoloji</span>
+              <h2 className="section__h2">Her sistem beş<br/><em>adımda zekalaşır.</em></h2>
+              <p className="section__sub">SRYVERSE'in her ürünü endüstri mühendisliği perspektifi ve yapay zeka mühendisliği gücüyle inşa edilir.</p>
             </div>
-            <div className="grid grid--4 fade-up" style={{ animationDelay: '0.15s' }}>
+            <IntelligenceLayer />
+            <div className="intel-cards">
               {[
-                {
-                  icon: '◈',
-                  title: 'Process Intelligence',
-                  desc: 'We map messy business workflows into measurable, observable systems — before automating anything.',
-                },
-                {
-                  icon: '◎',
-                  title: 'AI Decision Layer',
-                  desc: 'We use LLMs, automation and data models to support better decisions at scale.',
-                },
-                {
-                  icon: '⬡',
-                  title: 'Scalable SaaS Architecture',
-                  desc: 'Products are built as cloud-native platforms, designed for growth from day one.',
-                },
-                {
-                  icon: '◇',
-                  title: 'Business Impact',
-                  desc: 'Every feature is designed to reduce time, cost and operational friction — measurably.',
-                },
-              ].map((card, i) => (
-                <div key={i} className="card card--intelligence" style={{ animationDelay: `${i * 0.08}s` }}>
-                  <div className="card__icon">{card.icon}</div>
-                  <h3 className="card__title">{card.title}</h3>
-                  <p className="card__desc">{card.desc}</p>
+                { icon: '◈', title: 'Süreç Zekası', desc: 'Dağınık iş akışlarını ölçülebilir sistemlere çeviriyoruz.' },
+                { icon: '◎', title: 'AI Karar Katmanı', desc: 'LLM\'ler ve otomasyon modellerini daha iyi kararlar için kullanıyoruz.' },
+                { icon: '⬡', title: 'SaaS Mimarisi', desc: 'Ürünler bulut-native platformlar olarak ölçeklenmeye hazır inşa edilir.' },
+                { icon: '◇', title: 'İş Etkisi', desc: 'Her özellik zaman, maliyet ve operasyonel sürtüşmeyi azaltacak şekilde tasarlanır.' },
+              ].map((c,i) => (
+                <div key={i} className="intel-card">
+                  <div className="intel-card__icon">{c.icon}</div>
+                  <h4 className="intel-card__title">{c.title}</h4>
+                  <p className="intel-card__desc">{c.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* PRODUCTS */}
-        <section className="section section--tinted" id="products">
-          <div className="container">
-            <div className="section__header fade-up">
-              <span className="label">Product Ecosystem</span>
-              <h2 className="section__title">One ecosystem.<br />Multiple AI products.</h2>
+        {/* ── PRODUCTS ── */}
+        <section className="section section--sage" id="products">
+          <div className="wrap">
+            <div className="section__header">
+              <span className="eyebrow-label">Ürün Ekosistemi</span>
+              <h2 className="section__h2">Tek ekosistem.<br/><em>Çok sayıda AI ürünü.</em></h2>
             </div>
-            <div className="grid grid--3 fade-up" style={{ animationDelay: '0.1s' }}>
-              {/* SkillMatch */}
-              <div className="card card--product card--skillmatch">
-                <div className="product-card__header">
-                  <div className="product-badge product-badge--active">Live</div>
-                  <div className="product-card__brand">
-                    <h3 className="product-card__name">SkillMatch AI</h3>
-                    <span className="product-card__by">by SRYVERSE</span>
-                  </div>
-                </div>
-                <p className="product-card__desc">
-                  An AI-powered recruitment platform that analyzes CVs, matches candidates with roles, generates interview intelligence and supports end-to-end hiring workflows.
-                </p>
-                <ul className="product-features">
-                  {['AI CV Parsing', 'LLM Candidate Matching', 'Interview Copilot', 'Talent Pool', 'Hiring Analytics'].map(f => (
-                    <li key={f}><span className="feature-dot"></span>{f}</li>
-                  ))}
-                </ul>
-                <a href="https://skillmatch.sryverse.com" className="btn btn--product btn--dark" target="_blank" rel="noopener noreferrer">
-                  Launch SkillMatch AI →
-                </a>
-              </div>
+            <div className="products-grid">
+              {products.map(p => <ProductCard key={p.key} product={p}/>)}
+            </div>
+          </div>
+        </section>
 
-              {/* EstateMatch */}
-              <div className="card card--product card--estate">
-                <div className="product-card__header">
-                  <div className="product-badge product-badge--active">Live</div>
-                  <div className="product-card__brand">
-                    <h3 className="product-card__name">EstateMatch AI</h3>
-                    <span className="product-card__by">by SRYVERSE</span>
-                  </div>
-                </div>
-                <p className="product-card__desc">
-                  An AI-powered real estate platform that helps agencies manage properties, match client needs with listings and turn scattered portfolio data into intelligent recommendations.
-                </p>
-                <ul className="product-features">
-                  {['Smart Property Matching', 'Portfolio Management', 'AI Listing Assistant', 'Client Intelligence', 'Sales Pipeline'].map(f => (
-                    <li key={f}><span className="feature-dot feature-dot--sage"></span>{f}</li>
-                  ))}
-                </ul>
-                <a href="https://estate.sryverse.com" className="btn btn--product btn--mid" target="_blank" rel="noopener noreferrer">
-                  Launch EstateMatch AI →
-                </a>
+        {/* ── TRANSFORMATION EDITORIAL ── */}
+        <section className="section editorial" id="transformation">
+          <div className="wrap">
+            <div className="editorial__grid">
+              <div className="editorial__left">
+                <span className="eyebrow-label">Dönüşüm</span>
+                <h2 className="editorial__h2">
+                  Sadece yazılım<br/>değil.<br/>
+                  <em>Operasyonel<br/>dönüşüm.</em>
+                </h2>
               </div>
-
-              {/* Coming Soon */}
-              <div className="card card--product card--coming">
-                <div className="product-card__header">
-                  <div className="product-badge product-badge--soon">Coming Soon</div>
-                  <div className="product-card__brand">
-                    <h3 className="product-card__name">SRYVERSE Copilot</h3>
-                    <span className="product-card__by">by SRYVERSE</span>
+              <div className="editorial__right">
+                {[
+                  { before: 'Kaos', after: 'Netlik', icon: '→' },
+                  { before: 'Manuel', after: 'Otomatize', icon: '→' },
+                  { before: 'Dağınık Veri', after: 'Akıllı Sistem', icon: '→' },
+                  { before: 'Yavaş Karar', after: 'Gerçek Zamanlı Zeka', icon: '→' },
+                ].map((item,i) => (
+                  <div key={i} className="transform-row">
+                    <span className="transform-before">{item.before}</span>
+                    <span className="transform-arrow">→</span>
+                    <span className="transform-after">{item.after}</span>
                   </div>
-                </div>
-                <p className="product-card__desc">
-                  An AI assistant layer for business teams — analytics, operations and decision support, unified in one intelligent interface.
-                </p>
-                <ul className="product-features">
-                  {['BI Copilot', 'HR Copilot', 'Contract AI', 'Workflow Automation'].map(f => (
-                    <li key={f}><span className="feature-dot feature-dot--light"></span>{f}</li>
-                  ))}
-                </ul>
-                <a href="#contact" className="btn btn--product btn--ghost-dark">
-                  Join Waitlist →
-                </a>
+                ))}
               </div>
             </div>
           </div>
         </section>
 
-        {/* DIGITAL TRANSFORMATION */}
-        <section className="section" id="transformation">
-          <div className="container">
-            <div className="section__header fade-up">
-              <span className="label">Methodology</span>
-              <h2 className="section__title">Not just software.<br /><em>Operational transformation.</em></h2>
-            </div>
-            <div className="timeline fade-up" style={{ animationDelay: '0.1s' }}>
-              {[
-                { step: 'Observe', desc: 'Understand the real workflow — before writing a single line of code.' },
-                { step: 'Model', desc: 'Turn processes into data structures that can be measured, tracked and reasoned about.' },
-                { step: 'Optimize', desc: 'Find bottlenecks and decision points where intelligence can intervene.' },
-                { step: 'Automate', desc: 'Let AI handle repeatable intelligence, so humans focus on judgment.' },
-                { step: 'Scale', desc: 'Deploy as a productized SaaS system, built for growth without friction.' },
-              ].map((item, i) => (
-                <div key={i} className="timeline__item">
-                  <div className="timeline__connector">
-                    <div className="timeline__node">{i + 1}</div>
-                    {i < 4 && <div className="timeline__line"></div>}
-                  </div>
-                  <div className="timeline__content">
-                    <h4 className="timeline__step">{item.step}</h4>
-                    <p className="timeline__desc">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
+        {/* ── METRICS ── */}
+        <section className="metrics-section" ref={metricsRef}>
+          <div className="wrap">
+            <div className="metrics-grid">
+              <Metric value={2}   suffix=""   label="Aktif AI Ürünü"         active={metricsVisible}/>
+              <Metric value={10}  suffix="+"  label="AI İş Akışı"            active={metricsVisible}/>
+              <Metric value={100} suffix="K+" label="Ölçeklenmeye Hazır Kayıt" active={metricsVisible}/>
+              <Metric value={1}   suffix=""   label="Birleşik AI Ekosistemi"  active={metricsVisible}/>
             </div>
           </div>
         </section>
 
-        {/* METRICS */}
-        <section className="section section--dark" ref={metricsRef}>
-          <div className="container">
-            <div className="metrics">
-              {[
-                { value: 2, suffix: '', label: 'Active AI Products', prefix: '' },
-                { value: 10, suffix: '+', label: 'AI Workflows Automated', prefix: '' },
-                { value: 100, suffix: 'K+', label: 'Records Ready to Scale', prefix: '' },
-                { value: 1, suffix: '', label: 'Unified AI Ecosystem', prefix: '' },
-              ].map((m, i) => (
-                <MetricCard key={i} {...m} active={metricsInView} delay={i * 150} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* TECH STACK */}
+        {/* ── TECH STACK ── */}
         <section className="section">
-          <div className="container">
-            <div className="section__header fade-up">
-              <span className="label">Infrastructure</span>
-              <h2 className="section__title">Built on a modern<br />AI-native stack.</h2>
+          <div className="wrap">
+            <div className="section__header">
+              <span className="eyebrow-label">Altyapı</span>
+              <h2 className="section__h2">Modern bir<br/><em>AI-native stack.</em></h2>
             </div>
-            <div className="tech-grid fade-up" style={{ animationDelay: '0.1s' }}>
+            <div className="stack-grid">
               {[
-                { name: 'LLMs & AI Agents', mono: 'gemini · openai' },
-                { name: 'FastAPI Backend', mono: 'python · async' },
-                { name: 'Vue / Modern Frontend', mono: 'vue3 · vite' },
-                { name: 'PostgreSQL', mono: 'relational · scalable' },
-                { name: 'Railway / Vercel', mono: 'cloud · edge' },
-                { name: 'Supabase Storage', mono: 'files · buckets' },
-                { name: 'Analytics & Automation', mono: 'bi · workflows' },
-              ].map((t, i) => (
-                <div key={i} className="tech-card">
-                  <span className="tech-card__name">{t.name}</span>
-                  <span className="tech-card__mono">{t.mono}</span>
+                ['LLM & AI Ajanlar', 'gemini · openai'],
+                ['FastAPI Backend', 'python · async'],
+                ['Vue.js Frontend', 'vue3 · vite'],
+                ['PostgreSQL', 'ilişkisel · ölçeklenebilir'],
+                ['Railway / Vercel', 'bulut · edge'],
+                ['Supabase Storage', 'dosya · bucket'],
+                ['Analitik & Otomasyon', 'bi · workflow'],
+              ].map(([name, sub],i) => (
+                <div key={i} className="stack-card">
+                  <span className="stack-card__name">{name}</span>
+                  <span className="stack-card__sub">{sub}</span>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* USE CASES */}
-        <section className="section section--tinted">
-          <div className="container">
-            <div className="section__header fade-up">
-              <span className="label">Use Cases</span>
-              <h2 className="section__title">Designed for teams that<br />run complex operations.</h2>
+        {/* ── USE CASES ── */}
+        <section className="section section--sage">
+          <div className="wrap">
+            <div className="section__header">
+              <span className="eyebrow-label">Kullanım Alanları</span>
+              <h2 className="section__h2">Karmaşık operasyon<br/><em>yürüten ekipler için.</em></h2>
             </div>
-            <div className="grid grid--3 fade-up" style={{ animationDelay: '0.1s' }}>
+            <div className="cases-grid">
               {[
-                { role: 'Recruitment Teams', desc: 'Automate CV screening, candidate matching and interview scheduling across high-volume hiring pipelines.' },
-                { role: 'Real Estate Agencies', desc: 'Match client requirements to property listings intelligently, with AI-generated listing summaries.' },
-                { role: 'HR Departments', desc: 'Turn talent data into structured insights — workforce planning, skills gaps, and hiring analytics.' },
-                { role: 'Business Analysts', desc: 'Move from raw data to decision-ready intelligence with AI-assisted reporting and BI copilots.' },
-                { role: 'Operations Teams', desc: 'Map and automate operational workflows to eliminate repetitive manual work at scale.' },
-                { role: 'Digital Transformation Leaders', desc: 'Build a roadmap from today\'s fragmented tools to a unified, AI-native business infrastructure.' },
-              ].map((u, i) => (
-                <div key={i} className="card card--usecase">
-                  <h4 className="usecase__role">{u.role}</h4>
-                  <p className="usecase__desc">{u.desc}</p>
+                { role: 'İşe Alım Ekipleri', desc: 'Yüksek hacimli işe alım süreçlerinde CV eleme ve aday eşleştirmeyi otomatize edin.' },
+                { role: 'Gayrimenkul Acenteleri', desc: 'Müşteri gereksinimlerini ilanlarla akıllı biçimde eşleştirin, yapay zeka destekli öneriler alın.' },
+                { role: 'İnsan Kaynakları', desc: 'Yetenek verisini yapılandırılmış zekaya dönüştürün — iş gücü planlaması ve yetenek açığı analizi.' },
+                { role: 'İş Analistleri', desc: 'Ham veriden karar almaya hazır zekaya AI destekli raporlama ve BI kopilotlarıyla geçin.' },
+                { role: 'Operasyon Ekipleri', desc: 'Tekrarlayan manuel işleri ölçekte ortadan kaldırmak için operasyonel iş akışlarını haritalayın ve otomatize edin.' },
+                { role: 'Dijital Dönüşüm Liderleri', desc: 'Bugünün dağınık araçlarından birleşik, AI-native iş altyapısına giden yol haritanızı oluşturun.' },
+              ].map((c,i) => (
+                <div key={i} className="case-card">
+                  <h4 className="case-card__role">{c.role}</h4>
+                  <p className="case-card__desc">{c.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* VISION */}
-        <section className="section section--vision" id="vision">
-          <div className="container">
-            <div className="vision__inner fade-up">
-              <span className="label label--light">Vision</span>
-              <h2 className="vision__title">
-                The future is not one app.<br />
-                It is an <em>intelligent ecosystem.</em>
+        {/* ── VISION ── */}
+        <section className="vision" id="vision">
+          <div className="wrap">
+            <div className="vision__inner">
+              <span className="eyebrow-label eyebrow-label--light">Vizyon</span>
+              <h2 className="vision__h2">
+                Yazılım inşa<br/>etmiyoruz.
+              </h2>
+              <h2 className="vision__h2 vision__h2--em">
+                <em>Geleceğin işletim<br/>sistemini inşa ediyoruz.</em>
               </h2>
               <p className="vision__body">
-                SRYVERSE is building a universe of AI products that help businesses think, decide and operate faster.
+                SRYVERSE, işletmelerin daha hızlı düşünmesine, karar vermesine ve faaliyet göstermesine yardımcı olan bir AI ürünleri evreni inşa ediyor.
               </p>
               <div className="manifesto">
                 {[
-                  'We simplify complexity.',
-                  'We design systems.',
-                  'We automate intelligence.',
-                  'We build products that scale.',
-                ].map((line, i) => (
+                  'Karmaşıklığı sadeleştiriyoruz.',
+                  'Sistemler tasarlıyoruz.',
+                  'Zekayı otomatize ediyoruz.',
+                  'Ölçeklenen ürünler inşa ediyoruz.',
+                ].map((line,i) => (
                   <div key={i} className="manifesto__line">
-                    <span className="manifesto__mark">—</span>
+                    <span className="manifesto__dash">—</span>
                     <span>{line}</span>
                   </div>
                 ))}
@@ -436,120 +531,71 @@ export default function App() {
           </div>
         </section>
 
-        {/* CONTACT */}
+        {/* ── CONTACT ── */}
         <section className="section" id="contact">
-          <div className="container">
-            <div className="contact__grid">
-              <div className="contact__left fade-up">
-                <span className="label">Get in Touch</span>
-                <h2 className="section__title">Build your next<br />intelligent workflow<br />with SRYVERSE.</h2>
-                <p className="contact__note">Tell us about your process and we'll show you how AI can transform it.</p>
+          <div className="wrap">
+            <div className="contact-grid">
+              <div className="contact-left">
+                <span className="eyebrow-label">Demo Al</span>
+                <h2 className="contact-left__h2">
+                  Bir sonraki akıllı<br/>iş akışınızı<br/>birlikte kuralım.
+                </h2>
+                <p className="contact-left__note">Sürecinizi anlatın; SRYVERSE'in onu nasıl dönüştürebileceğini gösterelim.</p>
+                <div className="contact-left__items">
+                  <div className="contact-info">
+                    <span className="contact-info__label">Ekosistem</span>
+                    <span className="contact-info__val">sryverse.com</span>
+                  </div>
+                  <div className="contact-info">
+                    <span className="contact-info__label">Yanıt Süresi</span>
+                    <span className="contact-info__val">24 saat</span>
+                  </div>
+                </div>
               </div>
-              <div className="contact__right fade-up" style={{ animationDelay: '0.15s' }}>
+              <div className="contact-right">
                 <ContactForm />
               </div>
             </div>
           </div>
         </section>
+
       </main>
 
-      {/* FOOTER */}
+      {/* ── FOOTER ── */}
       <footer className="footer">
-        <div className="container footer__inner">
-          <div className="footer__brand">
-            <div className="logo logo--light">
-              <div className="logo__mark">
-                <SRYLogo size={32} dark />
+        <div className="wrap">
+          <div className="footer__main">
+            <div className="footer__brand">
+              <img src="/sryverse-logo.png" alt="SRYVERSE" className="footer__logo"/>
+              <p className="footer__tagline">Yapay zeka ürünleri.<br/>Operasyonel zeka.</p>
+            </div>
+            <div className="footer__links">
+              <div className="footer__col">
+                <h5>Ürünler</h5>
+                <a href="https://skillmatch.sryverse.com" target="_blank" rel="noopener noreferrer">SkillMatch AI</a>
+                <a href="https://estate.sryverse.com" target="_blank" rel="noopener noreferrer">EstateMatch AI</a>
+                <a href="#contact">SRYVERSE Copilot</a>
               </div>
-              <span className="logo__name logo__name--light">SRYVERSE</span>
-            </div>
-            <p className="footer__tagline">AI products for operational intelligence.</p>
-          </div>
-          <div className="footer__links">
-            <div className="footer__col">
-              <h5>Products</h5>
-              <a href="https://skillmatch.sryverse.com" target="_blank" rel="noopener noreferrer">SkillMatch AI</a>
-              <a href="https://estate.sryverse.com" target="_blank" rel="noopener noreferrer">EstateMatch AI</a>
-            </div>
-            <div className="footer__col">
-              <h5>Company</h5>
-              <a href="#vision">Vision</a>
-              <a href="#contact">Contact</a>
-            </div>
-            <div className="footer__col">
-              <h5>Connect</h5>
-              <a href="#">LinkedIn</a>
-              <a href="#">GitHub</a>
+              <div className="footer__col">
+                <h5>Şirket</h5>
+                <a href="#vision">Vizyon</a>
+                <a href="#intelligence">Metodoloji</a>
+                <a href="#contact">İletişim</a>
+              </div>
+              <div className="footer__col">
+                <h5>Bağlantı</h5>
+                <a href="#">LinkedIn</a>
+                <a href="#">GitHub</a>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="container footer__bottom">
-          <span>© 2026 SRYVERSE. All rights reserved.</span>
-          <span className="footer__mono">Built with operational intelligence.</span>
+          <div className="footer__bottom">
+            <span>© 2026 SRYVERSE. Tüm hakları saklıdır.</span>
+            <span className="footer__mono">Geleceğin işletim sistemi.</span>
+          </div>
         </div>
       </footer>
-    </div>
-  )
-}
 
-function MetricCard({ value, suffix, label, prefix, active, delay }) {
-  const count = useCounter(value, 1200, active)
-  return (
-    <div className="metric" style={{ transitionDelay: `${delay}ms` }}>
-      <div className="metric__value">
-        {prefix}{active ? count : 0}{suffix}
-      </div>
-      <div className="metric__label">{label}</div>
     </div>
-  )
-}
-
-function ContactForm() {
-  const [sent, setSent] = useState(false)
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    setSent(true)
-  }
-  if (sent) {
-    return (
-      <div className="form-success">
-        <div className="form-success__icon">✓</div>
-        <h4>Message received.</h4>
-        <p>We'll be in touch within 24 hours.</p>
-      </div>
-    )
-  }
-  return (
-    <form className="contact-form" onSubmit={handleSubmit}>
-      <div className="form-row">
-        <div className="form-field">
-          <label>Name</label>
-          <input type="text" placeholder="Your name" required />
-        </div>
-        <div className="form-field">
-          <label>Company</label>
-          <input type="text" placeholder="Company name" required />
-        </div>
-      </div>
-      <div className="form-field">
-        <label>Email</label>
-        <input type="email" placeholder="work@company.com" required />
-      </div>
-      <div className="form-field">
-        <label>Product interest</label>
-        <select required defaultValue="">
-          <option value="" disabled>Select a product</option>
-          <option>SkillMatch AI</option>
-          <option>EstateMatch AI</option>
-          <option>SRYVERSE Copilot</option>
-          <option>Custom solution</option>
-        </select>
-      </div>
-      <div className="form-field">
-        <label>Message</label>
-        <textarea rows="4" placeholder="Tell us about your workflow or challenge..." required></textarea>
-      </div>
-      <button type="submit" className="btn btn--primary btn--full">Request Demo →</button>
-    </form>
   )
 }
