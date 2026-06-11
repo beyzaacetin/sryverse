@@ -16,18 +16,6 @@ function useReveal(threshold = 0.1) {
   return [ref, v]
 }
 
-function useCounter(target, active, dur = 2000) {
-  const [val, setVal] = useState(0)
-  useEffect(() => {
-    if (!active) return
-    let st = null
-    const ease = t => t < .5 ? 2*t*t : -1+(4-2*t)*t
-    const step = ts => { if (!st) st = ts; const p = Math.min((ts-st)/dur,1); setVal(Math.round(ease(p)*target)); if(p<1)requestAnimationFrame(step) }
-    requestAnimationFrame(step)
-  }, [active, target, dur])
-  return val
-}
-
 function useTilt(s = 8) {
   const ref = useRef(null)
   const onMove = useCallback(e => {
@@ -40,9 +28,10 @@ function useTilt(s = 8) {
   return { ref, onMouseMove: onMove, onMouseLeave: onLeave }
 }
 
-/* ── Intel Flow ── */
+/* ── Intel Flow — canlı döngü animasyonu ── */
 function IntelFlow() {
   const [ref, v] = useReveal(0.2)
+  const [active, setActive] = useState(0)
   const steps = [
     {id:'01',tr:'Gözlemle',en:'Observe'},
     {id:'02',tr:'Modelle',en:'Model'},
@@ -50,12 +39,26 @@ function IntelFlow() {
     {id:'04',tr:'Otomatize',en:'Automate'},
     {id:'05',tr:'Ölçeklendir',en:'Scale'},
   ]
+  useEffect(() => {
+    if (!v) return
+    const t = setInterval(() => setActive(a => (a + 1) % steps.length), 2200)
+    return () => clearInterval(t)
+  }, [v, steps.length])
+
   return (
     <div ref={ref} className={`iflow glass${v?' iflow--on':''}`}>
+      <div className="iflow__scan" />
       {steps.map((s,i) => (
-        <div key={s.id} className="fn">
-          <div className="fn__c"><span>{s.id}</span></div>
-          {i < steps.length-1 && <div className="fn__line"><div className="fn__fill" style={{transitionDelay:`${i*.12+.3}s`}}/></div>}
+        <div key={s.id} className={`fn${i===active?' fn--active':''}${i<active?' fn--done':''}`}>
+          <div className="fn__c">
+            <span>{s.id}</span>
+            <div className="fn__ring" />
+          </div>
+          {i < steps.length-1 && (
+            <div className="fn__line">
+              <div className="fn__fill" style={{width: i<active ? '100%' : i===active ? '100%' : '0%', transitionDuration: i===active ? '2.2s' : '.3s'}}/>
+            </div>
+          )}
           <div className="fn__txt"><b>{s.tr}</b><span>{s.en}</span></div>
         </div>
       ))}
@@ -63,45 +66,53 @@ function IntelFlow() {
   )
 }
 
-/* ── Live Ticker ── */
+/* ── Live Ticker — sürekli artan canlı sayaçlar ── */
+const TICK_ITEMS = [
+  {id:'t0', label:'Global AI Kullanımı /dk', color:'#22c55e', base:5154277, step:()=>Math.floor(Math.random()*2200+400), fmt:v=>Math.floor(v).toLocaleString('tr-TR')},
+  {id:'t1', label:'İşlenen CV /sn',          color:'#3b82f6', base:933.1,   step:()=>Math.random()*.7+.1,               fmt:v=>v.toFixed(1)},
+  {id:'t2', label:'Mülk Eşleşmesi /gün',     color:'#a78bfa', base:15444,   step:()=>Math.floor(Math.random()*14+2),    fmt:v=>Math.floor(v).toLocaleString('tr-TR')},
+  {id:'t3', label:'Otomasyon Kararı /sn',    color:'#f59e0b', base:2368.8,  step:()=>Math.random()*.5+.1,               fmt:v=>v.toFixed(1)},
+]
 function LiveTicker() {
-  const items = [
-    {id:'t0', label:'Global AI Kullanımı /dk', color:'#22c55e', base:4800000, step:()=>Math.floor(Math.random()*3000+500), fmt:v=>v.toLocaleString('tr-TR')},
-    {id:'t1', label:'İşlenen CV /sn',          color:'#3b82f6', base:847,     step:()=>Math.random()*.8+.1,               fmt:v=>v.toFixed(1)},
-    {id:'t2', label:'Mülk Eşleşmesi /gün',     color:'#a78bfa', base:12400,   step:()=>Math.floor(Math.random()*25+5),    fmt:v=>v.toLocaleString('tr-TR')},
-    {id:'t3', label:'Otomasyon Kararı /sn',    color:'#f59e0b', base:2300,    step:()=>Math.random()*.6+.1,               fmt:v=>v.toFixed(1)},
-  ]
-  const vals = useRef(items.map(i=>i.base))
-  const [display, setDisplay] = useState(items.map((i,idx)=>i.fmt(vals.current[idx])))
+  const vals = useRef(TICK_ITEMS.map(i=>i.base))
+  const [display, setDisplay] = useState(TICK_ITEMS.map((i,idx)=>i.fmt(vals.current[idx])))
+  const [pulse, setPulse] = useState(0)
 
   useEffect(() => {
     const t = setInterval(() => {
-      items.forEach((item,i) => { vals.current[i] += item.step() })
-      setDisplay(items.map((item,i) => item.fmt(vals.current[i])))
-    }, 800)
+      TICK_ITEMS.forEach((item,i) => { vals.current[i] += item.step() })
+      setDisplay(TICK_ITEMS.map((item,i) => item.fmt(vals.current[i])))
+      setPulse(p => p + 1)
+    }, 300)
     return () => clearInterval(t)
   }, [])
 
   return (
     <div className="lticker">
-      <span className="lticker__label">🔴 Canlı</span>
-      {items.map((item,i) => (
-        <div key={item.id} className="ltick glass">
-          <span className="ltick__dot" style={{background:item.color, animationDelay:`${i*.3}s`}}/>
-          <span className="ltick__val">{display[i]}</span>
-          <span className="ltick__lbl">{item.label}</span>
-        </div>
-      ))}
+      <div className="lticker__badge"><span className="lticker__reddot"/>CANLI VERİ AKIŞI</div>
+      <div className="lticker__grid">
+        {TICK_ITEMS.map((item,i) => (
+          <div key={item.id} className="ltick glass">
+            <div className="ltick__top">
+              <span className="ltick__dot" style={{background:item.color, animationDelay:`${i*.3}s`}}/>
+              <span className="ltick__lbl">{item.label}</span>
+            </div>
+            <span key={pulse + '-' + i} className="ltick__val">{display[i]}</span>
+            <div className="ltick__bar"><div className="ltick__barfill" style={{background:item.color}}/></div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
 /* ── Product Card ── */
-function ProductCard({ p }) {
+function ProductCard({ p, idx }) {
   const tilt = useTilt(7)
   return (
-    <div className={`pcard pcard--${p.key}`} {...tilt}>
+    <div className={`pcard pcard--${p.key}`} style={{animationDelay:`${idx*.7}s`}} {...tilt}>
       <CardCanvas variant={p.key} />
+      <div className="pcard__sweep" />
       <div className="pcard__c">
         <span className={`pbadge pbadge--${p.live?'live':p.future?'future':'soon'}`}>
           {p.live ? <><i className="bdot"/>{' '}CANLI</> : p.future ? '✦ GELECEKTE' : 'YAKINDA'}
@@ -125,13 +136,84 @@ function ProductCard({ p }) {
   )
 }
 
-/* ── Metric ── */
-function Metric({ value, suffix, label, active }) {
-  const v = useCounter(value, active)
+/* ── Metodoloji — otomatik akan süreç sahnesi ── */
+const METHOD_STEPS = [
+  {id:'01',name:'Gözlemle',  en:'OBSERVE',  desc:'İş akışlarını ve operasyonel darboğazları tespit et. Süreç, veri olmadan görünmez.'},
+  {id:'02',name:'Modelle',   en:'MODEL',    desc:'Süreci veri yapılarına ve ölçülebilir modellere dönüştür. Ölçemediğini yönetemezsin.'},
+  {id:'03',name:'Optimize Et',en:'OPTIMIZE',desc:'Kritik karar noktalarını ve verimsizlikleri belirle. Her saniye bir maliyettir.'},
+  {id:'04',name:'Otomatize', en:'AUTOMATE', desc:'Tekrarlayan, yüksek hacimli görevleri AI ile devral. İnsan stratejiye odaklansın.'},
+  {id:'05',name:'Ölçeklendir',en:'SCALE',   desc:'SaaS platformu olarak deploy et ve büyü. Sistem, kurulduğu günden büyüktür.'},
+]
+function Method() {
+  const [ref, v] = useReveal(0.25)
+  const [active, setActive] = useState(0)
+  const [paused, setPaused] = useState(false)
+  useEffect(() => {
+    if (!v || paused) return
+    const t = setInterval(() => setActive(a => (a + 1) % METHOD_STEPS.length), 3400)
+    return () => clearInterval(t)
+  }, [v, paused])
+  const s = METHOD_STEPS[active]
   return (
-    <div className="metric">
-      <div className="metric__val">{v}{suffix}</div>
-      <div className="metric__lbl">{label}</div>
+    <div ref={ref} className={`method${v?' method--on':''}`} onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)}>
+      <div className="method__stage" key={active}>
+        <span className="method__bignum">{s.id}</span>
+        <span className="method__en">{s.en}</span>
+        <h3 className="method__name">{s.name}</h3>
+        <p className="method__desc">{s.desc}</p>
+      </div>
+      <div className="method__list">
+        {METHOD_STEPS.map((m,i) => (
+          <button key={m.id} className={`mrow${i===active?' mrow--on':''}${i<active?' mrow--done':''}`} onClick={()=>setActive(i)}>
+            <span className="mrow__id">{m.id}</span>
+            <span className="mrow__name">{m.name}</span>
+            <span className="mrow__en">{m.en}</span>
+            <div className="mrow__track">
+              {i===active && !paused && v && <div className="mrow__progress" key={active}/>}
+              {(i<active || (i===active && paused)) && <div className="mrow__progress mrow__progress--full"/>}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ── Kimler İçin — animasyonlu ikonlar + dönen spot ── */
+const CASES = [
+  {en:'Recruitment Teams',     tr:'İşe Alım Ekipleri',      desc:'Doğru yeteneği daha hızlı ve daha akıllı işe alın.',
+   icon:(on)=>(<svg viewBox="0 0 48 48" className={`cic${on?' cic--on':''}`}><circle className="cic-a" cx="24" cy="16" r="7"/><path className="cic-a" d="M10 40c0-8 6-13 14-13s14 5 14 13"/><path className="cic-b" d="M32 20l4 4 8-9"/></svg>)},
+  {en:'Real Estate Agencies',  tr:'Gayrimenkul Acenteleri', desc:'Mülkleri, müşterileri ve fırsatları eşleştirin.',
+   icon:(on)=>(<svg viewBox="0 0 48 48" className={`cic${on?' cic--on':''}`}><path className="cic-a" d="M8 22L24 8l16 14"/><path className="cic-a" d="M12 20v20h24V20"/><rect className="cic-b" x="20" y="28" width="8" height="12"/></svg>)},
+  {en:'HR Departments',        tr:'İnsan Kaynakları',       desc:'İnsan verilerini stratejik içgörülere dönüştürün.',
+   icon:(on)=>(<svg viewBox="0 0 48 48" className={`cic${on?' cic--on':''}`}><circle className="cic-a" cx="16" cy="18" r="5"/><circle className="cic-a" cx="32" cy="18" r="5"/><path className="cic-a" d="M6 38c0-6 4-10 10-10M42 38c0-6-4-10-10-10"/><path className="cic-b" d="M20 32h8M24 28v8"/></svg>)},
+  {en:'Operations Teams',      tr:'Operasyon Ekipleri',     desc:'İş akışlarını otomatize edin, sürtüşmeyi azaltın.',
+   icon:(on)=>(<svg viewBox="0 0 48 48" className={`cic${on?' cic--on':''}`}><circle className="cic-spin" cx="24" cy="24" r="9"/><path className="cic-a" d="M24 11V5M24 43v-6M37 24h6M5 24h6M33.5 14.5l4-4M10.5 37.5l4-4M33.5 33.5l4 4M10.5 10.5l4 4"/><circle className="cic-b" cx="24" cy="24" r="3"/></svg>)},
+  {en:'Business Analysts',     tr:'İş Analistleri',         desc:'Veriyi AI yardımıyla kararlara dönüştürün.',
+   icon:(on)=>(<svg viewBox="0 0 48 48" className={`cic${on?' cic--on':''}`}><path className="cic-a" d="M8 40h34M8 40V8"/><rect className="cic-bar cic-bar1" x="14" y="26" width="6" height="14"/><rect className="cic-bar cic-bar2" x="24" y="18" width="6" height="22"/><rect className="cic-bar cic-bar3" x="34" y="10" width="6" height="30"/></svg>)},
+  {en:'Transformation Leaders',tr:'Dönüşüm Liderleri',      desc:'Geleceğin akıllı organizasyonunu inşa edin.',
+   icon:(on)=>(<svg viewBox="0 0 48 48" className={`cic${on?' cic--on':''}`}><path className="cic-a" d="M10 38c2-14 12-24 28-28"/><path className="cic-b" d="M28 8h10v10"/><circle className="cic-a" cx="10" cy="38" r="3"/></svg>)},
+]
+function UseCases() {
+  const [ref, v] = useReveal(0.15)
+  const [spot, setSpot] = useState(0)
+  useEffect(() => {
+    if (!v) return
+    const t = setInterval(() => setSpot(s => (s + 1) % CASES.length), 2400)
+    return () => clearInterval(t)
+  }, [v])
+  return (
+    <div ref={ref} className={`cgrid${v?' cgrid--on':''}`}>
+      {CASES.map((c,i) => (
+        <div key={i} className={`ccard glass${i===spot?' ccard--spot':''}`} style={{transitionDelay: v?`${i*.08}s`:'0s'}} onMouseEnter={()=>setSpot(i)}>
+          <div className="ccard__shine"/>
+          <div className="ccard__beam"/>
+          <div className="ccard__icon">{c.icon(i===spot)}</div>
+          <span className="ccard__en">{c.en}</span>
+          <h4 className="ccard__tr">{c.tr}</h4>
+          <p className="ccard__desc">{c.desc}</p>
+        </div>
+      ))}
     </div>
   )
 }
@@ -170,11 +252,56 @@ function ContactForm() {
   )
 }
 
+/* ── Vizyon & Misyon sayfası ── */
+function VisionPage() {
+  useEffect(() => { window.scrollTo(0, 0) }, [])
+  return (
+    <main className="vpage">
+      <section className="vpage__hero">
+        <Background density={1} color="120,210,170" boost={0.85} />
+        <div className="wrap vpage__in">
+          <span className="elabel elabel--light fade-up">Vizyon & Misyon</span>
+          <h1 className="vpage__h1 fade-up" style={{animationDelay:'.1s'}}>
+            Araç inşa etmiyoruz.<br/>
+            <em>Geleceğin işletim katmanını inşa ediyoruz.</em>
+          </h1>
+          <p className="vpage__sub fade-up" style={{animationDelay:'.2s'}}>
+            SRYVERSE, işletmelerin geleceğin hızında düşünmesine, karar vermesine ve faaliyet göstermesine yardımcı olan işletim altyapısını inşa ediyor.
+          </p>
+        </div>
+      </section>
+
+      <section className="vpage__blocks">
+        <div className="wrap vpage__grid">
+          <div className="vblock fade-up">
+            <span className="vblock__id">01</span>
+            <h2 className="vblock__h">Vizyonumuz</h2>
+            <p className="vblock__p">Her işletmenin merkezinde, kendi operasyonunu gözlemleyen, öğrenen ve optimize eden bir zeka katmanının olduğu bir gelecek. SRYVERSE, o katmanın kendisi olmayı hedefliyor — tek bir araç değil, işin üzerinde çalıştığı işletim sistemi.</p>
+          </div>
+          <div className="vblock fade-up" style={{animationDelay:'.12s'}}>
+            <span className="vblock__id">02</span>
+            <h2 className="vblock__h">Misyonumuz</h2>
+            <p className="vblock__p">Karmaşık operasyonları, sistem mühendisliği disipliniyle modellenmiş ve yapay zekayla otomatize edilmiş, ölçeklenebilir SaaS ürünlerine dönüştürmek. Her sektörde, bir seferde bir süreç.</p>
+          </div>
+        </div>
+
+        <div className="wrap">
+          <div className="manifesto">
+            {['Karmaşıklığı sadeleştiriyoruz.','Sistemler tasarlıyoruz.','Zekayı otomatize ediyoruz.','Ölçeklenen ürünler inşa ediyoruz.'].map((l,i) => (
+              <div key={i} className="manifesto__line fade-up" style={{animationDelay:`${.2+i*.1}s`}}><span>—</span>{l}</div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
+  )
+}
+
 /* ══════════════ MAIN ══════════════ */
 export default function App() {
   const [scrollY, setScrollY] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [mRef, mVisible] = useReveal(0.3)
+  const [page, setPage] = useState('home')
   const [heroRef, heroOn] = useReveal(0.05)
 
   useEffect(() => {
@@ -183,35 +310,48 @@ export default function App() {
     return () => window.removeEventListener('scroll', fn)
   }, [])
 
+  const go = useCallback((target) => {
+    setMenuOpen(false)
+    if (target === 'vision') { setPage('vision'); return }
+    if (page !== 'home') {
+      setPage('home')
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        document.querySelector(target)?.scrollIntoView({ behavior: 'smooth' })
+      }))
+    } else {
+      document.querySelector(target)?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [page])
+
   const products = [
-    { key:'skill',  name:'SkillMatch AI',    category:'Recruitment Intelligence',     live:true,  future:false, url:'https://skillmatch.sryverse.com', desc:'İşe alım süreçlerindeki karmaşıklığı çözen AI platformu — CV analizi, darboğaz tespiti ve aday eşleştirme ile uçtan uca dönüşüm.' },
-    { key:'estate', name:'EstateMatch AI',   category:'Real Estate Intelligence',     live:true,  future:false, url:'https://estate.sryverse.com',      desc:'Gayrimenkul operasyonlarını sistemleştiren AI platformu — portföy yönetimi, akıllı eşleştirme ve müşteri zekası tek çatı altında.' },
-    { key:'future', name:'Yeni Ürün',        category:'SRYVERSE Ekosistemi',          live:false, future:true,  url:null, desc:'SRYVERSE ekosisteminin bir sonraki halkası şekilleniyor. Yeni bir iş alanı, yeni bir AI ürünü — yakında duyurulacak.' },
+    { key:'skill',  name:'SkillMatch AI',  category:'Recruitment Intelligence', live:true,  future:false, url:'https://skillmatch.sryverse.com', desc:'İşe alım süreçlerindeki karmaşıklığı çözen AI platformu — CV analizi, darboğaz tespiti ve aday eşleştirme ile uçtan uca dönüşüm.' },
+    { key:'estate', name:'EstateMatch AI', category:'Real Estate Intelligence', live:true,  future:false, url:'https://estate.sryverse.com',      desc:'Gayrimenkul operasyonlarını sistemleştiren AI platformu — portföy yönetimi, akıllı eşleştirme ve müşteri zekası tek çatı altında.' },
+    { key:'future', name:'Yeni Ürün',      category:'SRYVERSE Ekosistemi',      live:false, future:true,  url:null, desc:'SRYVERSE ekosisteminin bir sonraki halkası şekilleniyor. Yeni bir iş alanı, yeni bir AI ürünü — yakında duyurulacak.' },
   ]
 
   const nav = [
-    {label:'Ürünler',href:'#products'},
-    {label:'Zeka Katmanı',href:'#intelligence'},
-    {label:'Çözümler',href:'#usecases'},
-    {label:'Vizyon',href:'#vision'},
-    {label:'İletişim',href:'#contact'},
+    {label:'Ürünler',    target:'#products'},
+    {label:'Metodoloji', target:'#methodology'},
+    {label:'Çözümler',   target:'#usecases'},
+    {label:'Vizyon',     target:'vision'},
+    {label:'İletişim',   target:'#contact'},
   ]
 
   return (
     <div className="site">
 
       {/* HEADER */}
-      <header className={`hdr${scrollY>30?' hdr--solid':''}`}>
+      <header className={`hdr${scrollY>30?' hdr--solid':''}${page==='vision'?' hdr--dark':''}`}>
         <div className="hdr__in">
-          <a href="/" className="hdr__logo">
-            <img src="/sryverse-logo.png" alt="SRYVERSE" className="hdr__logo-img" />
+          <a href="/" className="hdr__logo" onClick={e=>{e.preventDefault(); setPage('home'); window.scrollTo({top:0,behavior:'smooth'})}}>
+            <img src={page==='vision' ? '/sryverse-logo-white.png' : '/sryverse-logo.png'} alt="SRYVERSE" className="hdr__logo-img" />
           </a>
           <nav className={`hdr__nav${menuOpen?' hdr__nav--open':''}`}>
-            {nav.map(n => <a key={n.label} href={n.href} className="nlink" onClick={()=>setMenuOpen(false)}>{n.label}</a>)}
+            {nav.map(n => <a key={n.label} href={n.target==='vision'?'#':n.target} className={`nlink${n.target==='vision'&&page==='vision'?' nlink--cur':''}`} onClick={e=>{e.preventDefault(); go(n.target)}}>{n.label}</a>)}
           </nav>
           <div className="hdr__act">
-            <a href="#products" className="hbtn hbtn--g">Ürünleri Keşfet</a>
-            <a href="#contact" className="hbtn hbtn--s">Demo Al →</a>
+            <a href="#products" className="hbtn hbtn--g" onClick={e=>{e.preventDefault(); go('#products')}}>Ürünleri Keşfet</a>
+            <a href="#contact" className="hbtn hbtn--s" onClick={e=>{e.preventDefault(); go('#contact')}}>Demo Al →</a>
           </div>
           <button className={`burger${menuOpen?' burger--x':''}`} onClick={()=>setMenuOpen(!menuOpen)} aria-label="Menü">
             <span/><span/><span/>
@@ -219,6 +359,7 @@ export default function App() {
         </div>
       </header>
 
+      {page === 'vision' ? <VisionPage /> : (
       <main>
 
         {/* HERO */}
@@ -228,7 +369,7 @@ export default function App() {
             <div className={`hero__content${heroOn?' hero__content--on':''}`}>
               <div className="hero__eye">
                 <span className="edot"/>
-                Endüstri Mühendisliği × AI × Dijital Dönüşüm
+                Operasyonel Zeka × Üretken AI × Sınırsız Ölçek
               </div>
               <h1 className="hero__h1">
                 Operasyonel Karmaşıklıktan<br/>
@@ -238,16 +379,13 @@ export default function App() {
                 İş süreçlerindeki darboğazları tespit eder, sistemleştirir ve yapay zeka destekli ürünlerle ölçeklenebilir çözümlere dönüştürürüz.
               </p>
               <div className="hero__ctas">
-                <a href="#products" className="btn btn--p">Ekosistemi Keşfet <span>→</span></a>
-                <a href="#contact" className="btn btn--o">Demo Talep Et</a>
+                <a href="#products" className="btn btn--p" onClick={e=>{e.preventDefault(); go('#products')}}>Ekosistemi Keşfet <span>→</span></a>
+                <a href="#contact" className="btn btn--o" onClick={e=>{e.preventDefault(); go('#contact')}}>Demo Talep Et</a>
               </div>
-              <p className="elabel" style={{marginBottom:'10px'}}>Operasyonel Zeka Katmanı</p>
               <IntelFlow />
             </div>
-            <div className="hero__pills">
-              <div className="pill glass"><span className="pill__num">2</span><span className="pill__lbl">Aktif AI Ürünü</span></div>
-              <div className="pill glass"><span className="pill__num">10+</span><span className="pill__lbl">AI İş Akışı</span></div>
-              <div className="pill glass"><span className="pill__num">100K+</span><span className="pill__lbl">Kayıt İşlendi</span></div>
+            <div className={`hero__side${heroOn?' hero__side--on':''}`}>
+              <Terminal compact />
             </div>
           </div>
           <div className="scroll-hint"><div className="scroll-line"/></div>
@@ -264,56 +402,19 @@ export default function App() {
               <h2 className="sec__h2">Tek ekosistem.<br/><em>Çok sayıda AI ürünü.</em></h2>
             </div>
             <div className="pgrid">
-              {products.map(p => <ProductCard key={p.key} p={p}/>)}
+              {products.map((p,i) => <ProductCard key={p.key} p={p} idx={i}/>)}
             </div>
           </div>
         </section>
 
-        {/* METRICS */}
-        <section className="msec" ref={mRef}>
-          <Background density={0.6} />
-          <div className="wrap mgrid">
-            <Metric value={2}   suffix=""   label="Aktif AI Ürünü"         active={mVisible}/>
-            <Metric value={10}  suffix="+"  label="Otomatize İş Akışı"     active={mVisible}/>
-            <Metric value={100} suffix="K+" label="Kararlar Geliştirildi"   active={mVisible}/>
-            <Metric value={1}   suffix=""   label="Birleşik Platform"       active={mVisible}/>
-          </div>
-        </section>
-
-        {/* INTELLIGENCE TERMINAL */}
-        <section className="sec" id="intelligence">
+        {/* METHODOLOGY */}
+        <section className="sec sec--tint" id="methodology">
           <div className="wrap">
             <div className="sec__head fade-up">
-              <span className="elabel">Operasyonel Zeka Katmanı</span>
-              <h2 className="sec__h2">Sisteme sor,<br/><em>gerçek zamanlı yanıt al.</em></h2>
-              <p className="sec__sub">Her katmana tıkla, canlı sistemi gözlemle — ya da kendi sorunuzu sorun.</p>
-            </div>
-            <Terminal />
-          </div>
-        </section>
-
-        {/* HOW WE WORK */}
-        <section className="sec sec--tint" id="howwe">
-          <div className="wrap howwe fade-up">
-            <div className="howwe__left">
               <span className="elabel">Metodoloji</span>
-              <h2 className="howwe__h2">Karmaşıklıktan<br/><em>ölçekte netliğe.</em></h2>
+              <h2 className="sec__h2">Karmaşıklıktan<br/><em>ölçekte netliğe.</em></h2>
             </div>
-            <div className="steps">
-              {[
-                {id:'01',name:'Gözlemle',desc:'İş akışlarını ve operasyonel darboğazları tespit et.'},
-                {id:'02',name:'Modelle',desc:'Süreci veri yapılarına ve ölçülebilir modellere dönüştür.'},
-                {id:'03',name:'Optimize Et',desc:'Kritik karar noktalarını ve verimsizlikleri belirle.'},
-                {id:'04',name:'Otomatize',desc:'Tekrarlayan, yüksek hacimli görevleri AI ile devral.'},
-                {id:'05',name:'Ölçeklendir',desc:'SaaS platformu olarak deploy et ve büyü.'},
-              ].map((s,i) => (
-                <div key={s.id} className="step" style={{animationDelay:`${i*.08}s`}}>
-                  <span className="step__id">{s.id}</span>
-                  <div className="step__txt"><b>{s.name}</b><span>{s.desc}</span></div>
-                  <div className="step__bar"><div className="step__fill" style={{width:`${100-i*12}%`}}/></div>
-                </div>
-              ))}
-            </div>
+            <Method />
           </div>
         </section>
 
@@ -324,52 +425,21 @@ export default function App() {
               <span className="elabel">Kimler İçin</span>
               <h2 className="sec__h2">Karmaşık operasyon<br/><em>yürüten ekipler için.</em></h2>
             </div>
-            <div className="cgrid">
-              {[
-                {en:'Recruitment Teams',   tr:'İşe Alım Ekipleri',     desc:'Doğru yeteneği daha hızlı ve daha akıllı işe alın.'},
-                {en:'Real Estate Agencies',tr:'Gayrimenkul Acenteleri', desc:'Mülkleri, müşterileri ve fırsatları eşleştirin.'},
-                {en:'HR Departments',      tr:'İnsan Kaynakları',       desc:'İnsan verilerini stratejik içgörülere dönüştürün.'},
-                {en:'Operations Teams',    tr:'Operasyon Ekipleri',     desc:'İş akışlarını otomatize edin, sürtüşmeyi azaltın.'},
-                {en:'Business Analysts',   tr:'İş Analistleri',         desc:'Veriyi AI yardımıyla kararlara dönüştürün.'},
-                {en:'Transformation Leaders',tr:'Dönüşüm Liderleri',   desc:'Geleceğin akıllı organizasyonunu inşa edin.'},
-              ].map((c,i) => (
-                <div key={i} className="ccard glass">
-                  <div className="ccard__shine"/>
-                  <span className="ccard__en">{c.en}</span>
-                  <h4 className="ccard__tr">{c.tr}</h4>
-                  <p className="ccard__desc">{c.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* VISION */}
-        <section className="vsec" id="vision">
-          <Background density={0.7} />
-          <div className="wrap vsec__in">
-            <span className="elabel elabel--dim">Vizyonumuz</span>
-            <p className="vision__l1">Araç inşa etmiyoruz.</p>
-            <h2 className="vision__l2"><em>Geleceğin işletim katmanını<br/>inşa ediyoruz.</em></h2>
-            <p className="vision__body">SRYVERSE, işletmelerin geleceğin hızında düşünmesine, karar vermesine ve faaliyet göstermesine yardımcı olan işletim altyapısını inşa ediyor.</p>
-            <div className="manifesto">
-              {['Karmaşıklığı sadeleştiriyoruz.','Sistemler tasarlıyoruz.','Zekayı otomatize ediyoruz.','Ölçeklenen ürünler inşa ediyoruz.'].map((l,i) => (
-                <div key={i} className="manifesto__line"><span>—</span>{l}</div>
-              ))}
-            </div>
+            <UseCases />
           </div>
         </section>
 
         {/* CONTACT */}
-        <section className="sec" id="contact">
+        <section className="sec sec--tint" id="contact">
           <div className="wrap cgrid2">
             <div className="fade-up">
-              <span className="elabel">Demo Al</span>
-              <h2 className="contact__h2">Bir sonraki akıllı iş akışınızı birlikte kuralım.</h2>
-              <p className="contact__note">Sürecinizi anlatın; nasıl dönüştürebileceğimizi gösterelim.</p>
+              <span className="elabel">Sistemi Kuralım</span>
+              <h2 className="contact__h2">Bir sonraki akıllı iş akışınızı <em>birlikte mühendisleyelim.</em></h2>
+              <p className="contact__note">Sürecinizi anlatın — darboğazı bulalım, sistemi tasarlayalım, otomasyonu kuralım.</p>
               <div className="contact__meta">
-                <div><span className="mlbl">Ekosistem</span><span className="mval">sryverse.com</span></div>
+                <div><span className="mlbl">Yaklaşım</span><span className="mval">Analiz → Tasarım → Otomasyon</span></div>
                 <div><span className="mlbl">Yanıt Süresi</span><span className="mval">24 saat</span></div>
+                <div><span className="mlbl">Ekosistem</span><span className="mval">sryverse.com</span></div>
               </div>
             </div>
             <div className="fade-up" style={{animationDelay:'0.15s'}}><ContactForm /></div>
@@ -377,11 +447,12 @@ export default function App() {
         </section>
 
       </main>
+      )}
 
       <footer className="footer">
         <div className="wrap footer__in">
           <div className="footer__brand">
-            <img src="/sryverse-logo.png" alt="SRYVERSE" className="footer__logo"/>
+            <img src="/sryverse-logo-white.png" alt="SRYVERSE" className="footer__logo"/>
             <p className="footer__tag">Yapay zeka ürünleri için operasyonel zeka.</p>
           </div>
           <div className="footer__links">
@@ -389,7 +460,11 @@ export default function App() {
               <a href="https://skillmatch.sryverse.com" target="_blank" rel="noopener noreferrer">SkillMatch AI</a>
               <a href="https://estate.sryverse.com" target="_blank" rel="noopener noreferrer">EstateMatch AI</a>
             </div>
-            <div className="fcol"><h5>Şirket</h5><a href="#vision">Vizyon</a><a href="#intelligence">Metodoloji</a><a href="#contact">İletişim</a></div>
+            <div className="fcol"><h5>Şirket</h5>
+              <a href="#" onClick={e=>{e.preventDefault(); go('vision')}}>Vizyon & Misyon</a>
+              <a href="#methodology" onClick={e=>{e.preventDefault(); go('#methodology')}}>Metodoloji</a>
+              <a href="#contact" onClick={e=>{e.preventDefault(); go('#contact')}}>İletişim</a>
+            </div>
             <div className="fcol"><h5>Bağlantı</h5><a href="#">LinkedIn</a><a href="#">GitHub</a></div>
           </div>
         </div>
