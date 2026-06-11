@@ -46,7 +46,7 @@ function IntelFlow() {
   }, [v, steps.length])
 
   return (
-    <div ref={ref} className={`iflow glass${v?' iflow--on':''}`}>
+    <div ref={ref} className={`iflow${v?' iflow--on':''}`}>
       <div className="iflow__scan" />
       {steps.map((s,i) => (
         <div key={s.id} className={`fn${i===active?' fn--active':''}${i<active?' fn--done':''}`}>
@@ -59,7 +59,7 @@ function IntelFlow() {
               <div className="fn__fill" style={{width: i<active ? '100%' : i===active ? '100%' : '0%', transitionDuration: i===active ? '2.2s' : '.3s'}}/>
             </div>
           )}
-          <div className="fn__txt"><b>{s.tr}</b><span>{s.en}</span></div>
+          <div className="fn__txt"><b>{s.tr}</b></div>
         </div>
       ))}
     </div>
@@ -118,7 +118,7 @@ function ProductCard({ p, idx }) {
           {p.live ? <><i className="bdot"/>{' '}CANLI</> : p.future ? '✦ GELECEKTE' : 'YAKINDA'}
         </span>
         <h3 className="pcard__name">{p.name}</h3>
-        <span className="pcard__cat">{p.category}</span>
+        <span className="pcard__cat" lang="en">{p.category}</span>
         <p className="pcard__desc">{p.desc}</p>
         <div className="pcard__foot">
           {p.live
@@ -209,7 +209,7 @@ function UseCases() {
           <div className="ccard__shine"/>
           <div className="ccard__beam"/>
           <div className="ccard__icon">{c.icon(i===spot)}</div>
-          <span className="ccard__en">{c.en}</span>
+          <span className="ccard__en" lang="en">{c.en}</span>
           <h4 className="ccard__tr">{c.tr}</h4>
           <p className="ccard__desc">{c.desc}</p>
         </div>
@@ -345,7 +345,10 @@ export default function App() {
         <div className="hdr__in">
           <a href="/" className="hdr__logo" onClick={e=>{e.preventDefault(); setPage('home'); window.scrollTo({top:0,behavior:'smooth'})}}>
             <img src={page==='vision' ? '/sryverse-badge-white.png' : '/sryverse-badge.png'} alt="SRYVERSE" className="hdr__badge" />
-            <span className="hdr__word">SRYVERSE</span>
+            <span className="hdr__wordwrap">
+              <span className="hdr__word">SRYVERSE</span>
+              <span className="hdr__tag" lang="en">Digital Transformation &amp; AI</span>
+            </span>
           </a>
           <nav className={`hdr__nav${menuOpen?' hdr__nav--open':''}`}>
             {nav.map(n => <a key={n.label} href={n.target==='vision'?'#':n.target} className={`nlink${n.target==='vision'&&page==='vision'?' nlink--cur':''}`} onClick={e=>{e.preventDefault(); go(n.target)}}>{n.label}</a>)}
