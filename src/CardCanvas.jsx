@@ -4,6 +4,7 @@ const PALETTES = {
   skill:   { p: 'rgba(29,200,120,', s: 'rgba(16,240,160,' },
   estate:  { p: 'rgba(29,130,220,', s: 'rgba(16,180,255,' },
   future:  { p: 'rgba(160,100,240,', s: 'rgba(200,150,255,' },
+  metraj:  { p: 'rgba(200,155,60,', s: 'rgba(232,196,120,' },
 }
 
 export default function CardCanvas({ variant = 'skill' }) {

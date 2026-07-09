@@ -109,30 +109,36 @@ function LiveTicker() {
 /* ── Product Card ── */
 function ProductCard({ p, idx }) {
   const tilt = useTilt(7)
+  const Tag = p.wholeCardLink && p.url ? 'a' : 'div'
+  const wrapProps = p.wholeCardLink && p.url
+    ? { href: p.url, target: '_blank', rel: 'noopener noreferrer' }
+    : {}
   return (
-    <div className={`pcard pcard--${p.key}`} style={{animationDelay:`${idx*.7}s`}} {...tilt}>
+    <Tag className={`pcard pcard--${p.key}`} style={{animationDelay:`${idx*.7}s`}} {...wrapProps} {...tilt}>
       <CardCanvas variant={p.key} />
       <div className="pcard__sweep" />
       <div className="pcard__c">
-        <span className={`pbadge pbadge--${p.live?'live':p.future?'future':'soon'}`}>
-          {p.live ? <><i className="bdot"/>{' '}CANLI</> : p.future ? '✦ GELECEKTE' : 'YAKINDA'}
+        <span className={`pbadge pbadge--${p.beta?'beta':p.live?'live':p.future?'future':'soon'}`}>
+          {p.beta ? '🔒 PRIVATE BETA' : p.live ? <><i className="bdot"/>{' '}CANLI</> : p.future ? '✦ GELECEKTE' : 'YAKINDA'}
         </span>
         <h3 className="pcard__name">{p.name}</h3>
         <span className="pcard__cat" lang="en">{p.category}</span>
         <p className="pcard__desc">{p.desc}</p>
         <div className="pcard__foot">
-          {p.live
-            ? <a href={p.url} className="pcta" target="_blank" rel="noopener noreferrer">Keşfet <span>→</span></a>
-            : p.future
-              ? <div className="pcard__future-hint">
-                  <div className="future-line"/>
-                  <p className="future-text">Bekleme listesine katıl →</p>
-                </div>
-              : <button className="pcta pcta--dim">Bekleme Listesi <span>→</span></button>
+          {p.beta
+            ? <span className="pcta">Launch App <span>→</span></span>
+            : p.live
+              ? <a href={p.url} className="pcta" target="_blank" rel="noopener noreferrer">Keşfet <span>→</span></a>
+              : p.future
+                ? <div className="pcard__future-hint">
+                    <div className="future-line"/>
+                    <p className="future-text">Bekleme listesine katıl →</p>
+                  </div>
+                : <button className="pcta pcta--dim">Bekleme Listesi <span>→</span></button>
           }
         </div>
       </div>
-    </div>
+    </Tag>
   )
 }
 
@@ -326,7 +332,7 @@ export default function App() {
   const products = [
     { key:'skill',  name:'SkillMatch AI',  category:'Recruitment Intelligence', live:true,  future:false, url:'https://skillmatch.sryverse.com', desc:'İşe alım süreçlerindeki karmaşıklığı çözen AI platformu — CV analizi, darboğaz tespiti ve aday eşleştirme ile uçtan uca dönüşüm.' },
     { key:'estate', name:'EstateMatch AI', category:'Real Estate Intelligence', live:true,  future:false, url:'https://estate.sryverse.com',      desc:'Gayrimenkul operasyonlarını sistemleştiren AI platformu — portföy yönetimi, akıllı eşleştirme ve müşteri zekası tek çatı altında.' },
-    { key:'future', name:'Yeni Ürün',      category:'SRYVERSE Ekosistemi',      live:false, future:true,  url:null, desc:'SRYVERSE ekosisteminin bir sonraki halkası şekilleniyor. Yeni bir iş alanı, yeni bir AI ürünü — yakında duyurulacak.' },
+    { key:'metraj', name:'Metraj AI',      category:'AI QUANTITY SURVEYING',    live:true,  future:false, beta:true, wholeCardLink:true, url:'https://metraj.sryverse.com', desc:'Mimari projelerden otomatik metraj çıkaran, keşif ve maliyet hesaplamalarını hızlandıran yapay zekâ platformu. PDF, DWG ve teknik çizimleri analiz ederek saniyeler içinde metraj oluşturur.' },
   ]
 
   const nav = [
