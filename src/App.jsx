@@ -2,10 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Background from './Background.jsx'
 import CardCanvas from './CardCanvas.jsx'
 import Terminal from './Terminal.jsx'
-import ThreeBg from './ThreeBg.jsx'
 import SkillMatchPage from './SkillMatchPage.jsx'
 import EstateMatchPage from './EstateMatchPage.jsx'
-import Lenis from 'lenis'
 import './App.css'
 
 /* ── hooks ── */
@@ -13,7 +11,7 @@ function useReveal(threshold = 0.1) {
   const ref = useRef(null)
   const [v, setV] = useState(false)
   useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setV(vState => true) }, { threshold })
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setV(true) }, { threshold })
     if (ref.current) obs.observe(ref.current)
     return () => obs.disconnect()
   }, [threshold])
@@ -113,7 +111,7 @@ function LiveTicker() {
 /* ── Product Card ── */
 function ProductCard({ p, idx, onExplore }) {
   const tilt = useTilt(7)
-  
+
   if (p.wholeCardLink && p.url) {
     return (
       <a href={p.url} className={`pcard pcard--${p.key}`} style={{animationDelay:`${idx*.7}s`}} target="_blank" rel="noopener noreferrer" {...tilt}>
@@ -323,119 +321,31 @@ function VisionPage() {
   )
 }
 
-/* ── 3D Scroll Progress Dots ── */
-function ProgressTracker({ activeIndex, onDotClick }) {
-  const steps = [
-    { label: 'SRYVERSE CORE' },
-    { label: 'SKILLMATCH AI' },
-    { label: 'ESTATEMATCH AI' },
-    { label: 'METRAJ AI' },
-    { label: 'METHODOLOGY' }
-  ];
-
-  return (
-    <div className="progress-tracker">
-      {steps.map((step, idx) => (
-        <div
-          key={idx}
-          className={`tracker-dot ${idx === activeIndex ? 'active' : ''}`}
-          onClick={() => onDotClick(idx)}
-          data-label={step.label}
-        />
-      ))}
-    </div>
-  );
-}
-
 /* ══════════════ MAIN ══════════════ */
 export default function App() {
   const [scrollY, setScrollY] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const [page, setPage] = useState('home')
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [isMobileOrReduced, setIsMobileOrReduced] = useState(false)
   const [heroRef, heroOn] = useReveal(0.05)
-  const lenisRef = useRef(null)
 
-  // Detect mobile device or prefers-reduced-motion for WebGL fallback
   useEffect(() => {
-    const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window);
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    setIsMobileOrReduced(isMobile || prefersReduced);
-  }, []);
-
-  // Initialize Lenis smooth scroll on home page
-  useEffect(() => {
-    if (page !== 'home') return;
-
-    const lenis = new Lenis({
-      duration: 1.4,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      orientation: 'vertical',
-      gestureOrientation: 'vertical',
-      smoothWheel: true,
-      wheelMultiplier: 1,
-      smoothTouch: false,
-    });
-
-    lenisRef.current = lenis;
-    window.lenisInstance = lenis;
-
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-    requestAnimationFrame(raf);
-
-    const onScroll = () => {
-      setScrollY(window.scrollY);
-    };
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-
-    // Listen to custom scroll indexing event dispatched by ThreeBg
-    const handleScrollIndex = (e) => {
-      setActiveIndex(e.detail.activeIdx);
-    };
-    window.addEventListener('sryverse-scroll-index', handleScrollIndex);
-
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('sryverse-scroll-index', handleScrollIndex);
-      lenis.destroy();
-      lenisRef.current = null;
-      window.lenisInstance = null;
-    };
-  }, [page]);
+    const fn = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', fn, { passive: true })
+    return () => window.removeEventListener('scroll', fn)
+  }, [])
 
   const go = useCallback((target) => {
-    setMenuOpen(false);
-    if (target === 'vision') { setPage('vision'); return; }
-    
+    setMenuOpen(false)
+    if (target === 'vision') { setPage('vision'); return }
     if (page !== 'home') {
-      setPage('home');
-      requestAnimationFrame(() => {
-        const el = document.querySelector(target);
-        if (el && lenisRef.current) {
-          lenisRef.current.scrollTo(el, { duration: 1.8 });
-        } else if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        }
-      });
+      setPage('home')
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        document.querySelector(target)?.scrollIntoView({ behavior: 'smooth' })
+      }))
     } else {
-      const el = document.querySelector(target);
-      if (el && lenisRef.current) {
-        lenisRef.current.scrollTo(el, { duration: 1.8 });
-      } else if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
+      document.querySelector(target)?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [page]);
-
-  const handleDotClick = (idx) => {
-    const targets = ['#hero-section', '#products', '#estate-section-anchor', '#metraj-section-anchor', '#methodology'];
-    go(targets[idx]);
-  };
+  }, [page])
 
   const products = [
     { key:'skill',  name:'SkillMatch AI',  category:'Recruitment Intelligence', live:true,  future:false, url:'https://skillmatch.sryverse.com', desc:'İşe alım süreçlerindeki karmaşıklığı çözen AI platformu — CV analizi, darboğaz tespiti ve aday eşleştirme ile uçtan uca dönüşüm.' },
@@ -444,29 +354,25 @@ export default function App() {
   ]
 
   const nav = [
-    {label:'Ürünler',    target:'#products', idx: 1},
-    {label:'Metodoloji', target:'#methodology', idx: 4},
-    {label:'Çözümler',   target:'#usecases', idx: 4},
-    {label:'Vizyon',     target:'vision', idx: -1},
-    {label:'İletişim',   target:'#contact', idx: 4},
+    {label:'Ürünler',    target:'#products'},
+    {label:'Metodoloji', target:'#methodology'},
+    {label:'Çözümler',   target:'#usecases'},
+    {label:'Vizyon',     target:'vision'},
+    {label:'İletişim',   target:'#contact'},
   ]
 
   return (
     <div className="site">
       
-      {/* 3D WebGL Background (with 2D canvas fallback for mobile/performance) */}
+      {/* Homepage original 2D canvas background */}
       {page === 'home' && (
-        isMobileOrReduced ? (
-          <Background density={1} boost={0.62} />
-        ) : (
-          <ThreeBg />
-        )
+        <Background density={1} boost={0.62} />
       )}
 
       {/* HEADER */}
       <header className={`hdr${scrollY>30?' hdr--solid':''}${page==='vision' || page==='skillmatch' || page==='estatematch' ? ' hdr--dark' : ''}`}>
         <div className="hdr__in">
-          <a href="/" className="hdr__logo" onClick={e=>{e.preventDefault(); setPage('home'); window.scrollTo({top:0})}}>
+          <a href="/" className="hdr__logo" onClick={e=>{e.preventDefault(); setPage('home'); window.scrollTo({top:0,behavior:'smooth'})}}>
             <img src={page==='vision' || page==='skillmatch' || page==='estatematch' ? '/sryverse-badge-white.png' : '/sryverse-badge.png'} alt="SRYVERSE" className="hdr__badge" />
             <span className="hdr__wordwrap">
               <span className="hdr__word">SRYVERSE</span>
@@ -474,16 +380,7 @@ export default function App() {
             </span>
           </a>
           <nav className={`hdr__nav${menuOpen?' hdr__nav--open':''}`}>
-            {nav.map(n => (
-              <a
-                key={n.label}
-                href={n.target==='vision'?'#':n.target}
-                className={`nlink${(n.target==='vision'&&page==='vision') || (page==='home' && n.idx===activeIndex && n.target!=='vision') ? ' nlink--cur' : ''}`}
-                onClick={e=>{e.preventDefault(); go(n.target)}}
-              >
-                {n.label}
-              </a>
-            ))}
+            {nav.map(n => <a key={n.label} href={n.target==='vision'?'#':n.target} className={`nlink${(n.target==='vision'&&page==='vision') ? ' nlink--cur' : ''}`} onClick={e=>{e.preventDefault(); go(n.target)}}>{n.label}</a>)}
           </nav>
           <div className="hdr__act">
             <a href="#products" className="hbtn hbtn--g" onClick={e=>{e.preventDefault(); go('#products')}}>Ürünleri Keşfet</a>
@@ -502,10 +399,10 @@ export default function App() {
       ) : page === 'estatematch' ? (
         <EstateMatchPage goBack={() => setPage('home')} />
       ) : (
-      <main className="site-scroll-wrapper">
+      <main>
 
         {/* HERO */}
-        <section className="hero" id="hero-section" ref={heroRef}>
+        <section className="hero" ref={heroRef}>
           <div className="hero__veil" />
           <div className="wrap hero__in">
             <div className={`hero__content${heroOn?' hero__content--on':''}`}>
@@ -548,10 +445,6 @@ export default function App() {
             </div>
           </div>
         </section>
-
-        {/* Hidden empty anchors to hook product navigation steps */}
-        <div id="estate-section-anchor" style={{ height: '1px', marginBottom: '-1px' }} />
-        <div id="metraj-section-anchor" style={{ height: '1px', marginBottom: '-1px' }} />
 
         {/* METHODOLOGY */}
         <section className="sec sec--tint" id="methodology">
@@ -597,11 +490,6 @@ export default function App() {
         </section>
 
       </main>
-      )}
-
-      {/* Progress dot HUD in home page */}
-      {page === 'home' && !isMobileOrReduced && (
-        <ProgressTracker activeIndex={activeIndex} onDotClick={handleDotClick} />
       )}
 
       <a className="wa-fab" href="https://wa.me/905315178170?text=Merhaba%2C%20SRYVERSE%20%C3%BCr%C3%BCnleri%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum." target="_blank" rel="noopener noreferrer" aria-label="WhatsApp ile iletişime geçin">
