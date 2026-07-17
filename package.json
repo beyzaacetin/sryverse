@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "three": "^0.150.0",
+    "gsap": "^3.12.2",
+    "lenis": "^1.1.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

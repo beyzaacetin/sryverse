@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRYVERSE — 3D Scroll Experience Preview</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <!-- Core Stylesheet -->
+  <style>
+    /* Reset & Theme Variables */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-dark: #051A15;
+      --forest: #0D3B2E;
+      --emerald: #124734;
+      --emerald-glow: rgba(18, 71, 52, 0.4);
+      --gold: #e8c26f;
+      --gold-glow: rgba(232, 194, 111, 0.3);
+      --blue: #38bdf8;
+      --blue-glow: rgba(56, 189, 248, 0.3);
+      
+      --text-white: #FFFFFF;
+      --text-muted: #9aada6;
+      --border-white: rgba(255, 255, 255, 0.1);
+      
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    html, body {
+      background-color: var(--bg-dark);
+      color: var(--text-white);
+      font-family: var(--font-sans);
+      overflow-x: hidden;
+      scroll-behavior: auto;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* WebGL Background */
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Header Nav */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 1.5rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, rgba(5, 26, 21, 0.8), transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-white);
+    }
+
+    .logo {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: var(--text-white);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logo span {
+      font-style: italic;
+      color: var(--gold);
+    }
+
+    nav {
+      display: flex;
+      gap: 2rem;
+    }
+
+    nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      transition: color 0.3s ease;
+      cursor: pointer;
+    }
+
+    nav a:hover, nav a.active {
+      color: var(--text-white);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .lang-toggle {
+      display: flex;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-white);
+      border-radius: 20px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .lang-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .lang-btn.active {
+      background: var(--text-white);
+      color: var(--bg-dark);
+      font-weight: 600;
+    }
+
+    /* Scroll Containers */
+    .scroll-container {
+      position: relative;
+      z-index: 5;
+      width: 100%;
+    }
+
+    section {
+      min-height: 100vh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding: 0 10%;
+    }
+
+    /* Content Cards */
+    .content-card {
+      max-width: 540px;
+      background: rgba(13, 59, 46, 0.25);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid var(--border-white);
+      border-radius: 16px;
+      padding: 3rem;
+      opacity: 0;
+      transform: translateY(40px);
+      transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .content-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Specific highlights */
+    .card--skill {
+      border-left: 4px solid #10b981;
+      box-shadow: 0 0 40px var(--emerald-glow);
+    }
+
+    .card--estate {
+      border-left: 4px solid var(--blue);
+      box-shadow: 0 0 40px var(--blue-glow);
+    }
+
+    .card--metraj {
+      border-left: 4px solid var(--gold);
+      box-shadow: 0 0 40px var(--gold-glow);
+    }
+
+    /* Text elements */
+    .badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+
+    .card--skill .badge { color: #34d399; }
+    .card--estate .badge { color: var(--blue); }
+    .card--metraj .badge { color: var(--gold); }
+
+    h1, h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 300;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 em, h2 em {
+      font-style: italic;
+      color: var(--gold);
+      font-weight: 400;
+    }
+
+    .card--skill h2 em { color: #34d399; }
+    .card--estate h2 em { color: var(--blue); }
+    .card--metraj h2 em { color: var(--gold); }
+
+    p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--text-white);
+      color: var(--bg-dark);
+      padding: 0.8rem 1.6rem;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      border: 1px solid transparent;
+    }
+
+    .cta-btn:hover {
+      background: transparent;
+      color: var(--text-white);
+      border-color: var(--text-white);
+      transform: translateY(-2px);
+    }
+
+    /* Scroll Indicators */
+    .scroll-indicator {
+      position: fixed;
+      bottom: 2.5rem;
+      right: 3rem;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 60px;
+      background: linear-gradient(to bottom, var(--text-white), transparent);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scroll-line::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 30%;
+      background: var(--gold);
+      animation: scrollAnim 2s infinite ease-in-out;
+    }
+
+    @keyframes scrollAnim {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(330%); }
+    }
+
+    /* Progress tracker */
+    .progress-tracker {
+      position: fixed;
+      left: 3rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .tracker-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .tracker-dot::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .tracker-dot:hover::after, .tracker-dot.active::after {
+      opacity: 1;
+      left: 25px;
+    }
+
+    .tracker-dot.active {
+      background: var(--gold);
+      box-shadow: 0 0 10px var(--gold-glow);
+      transform: scale(1.3);
+    }
+
+    /* Mobile Fallback Warning */
+    #mobile-warning {
+      display: none;
+      position: fixed;
+      bottom: 1rem;
+      left: 1rem;
+      right: 1rem;
+      background: rgba(232, 194, 111, 0.15);
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      padding: 0.8rem;
+      font-size: 0.75rem;
+      color: var(--gold);
+      text-align: center;
+      z-index: 200;
+      backdrop-filter: blur(10px);
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 1rem 1.5rem;
+      }
+      nav, .progress-tracker, .scroll-indicator {
+        display: none;
+      }
+      section {
+        padding: 0 5%;
+      }
+      .content-card {
+        padding: 2rem;
+      }
+      #mobile-warning {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WebGL Background Canvas -->
+  <div id="canvas-container"></div>
+
+  <!-- Header Navigation -->
+  <header>
+    <a href="#" class="logo">SRYVERSE<span>.</span></a>
+    <nav id="main-nav">
+      <a data-index="0" class="active">Sryverse</a>
+      <a data-index="1">SkillMatch AI</a>
+      <a data-index="2">EstateMatch AI</a>
+      <a data-index="3">Metraj AI</a>
+      <a data-index="4">Metodoloji</a>
+    </nav>
+    <div class="header-actions">
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="en-btn">EN</button>
+        <button class="lang-btn" id="tr-btn">TR</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Left Progress dots -->
+  <div class="progress-tracker">
+    <div class="tracker-dot active" data-index="0" data-label="SRYVERSE CORE"></div>
+    <div class="tracker-dot" data-index="1" data-label="SKILLMATCH AI"></div>
+    <div class="tracker-dot" data-index="2" data-label="ESTATEMATCH AI"></div>
+    <div class="tracker-dot" data-index="3" data-label="METRAJ AI"></div>
+    <div class="tracker-dot" data-index="4" data-label="METHODOLOGY"></div>
+  </div>
+
+  <!-- Scroll Down indicator -->
+  <div class="scroll-indicator">
+    <span id="scroll-text">Scroll Down</span>
+    <div class="scroll-line"></div>
+  </div>
+
+  <!-- Scrollable DOM overlays -->
+  <div class="scroll-container">
+    
+    <!-- Section 1: Intro -->
+    <section id="section-0">
+      <div class="content-card visible" id="card-0">
+        <span class="badge" data-key="badge-sry">Operational Intelligence Layer</span>
+        <h1 id="headline-0">Intelligent Software.<br><em>Real Transformation.</em></h1>
+        <p id="desc-0">SRYVERSE designs high-performance autonomous networks connecting complex business metrics, operational logic, and decision vectors into beautiful, self-managing ecosystems.</p>
+        <a href="#products" class="cta-btn" id="btn-0">Explore Ecosystem →</a>
+      </div>
+    </section>
+
+    <!-- Section 2: SkillMatch AI -->
+    <section id="section-1">
+      <div class="content-card card--skill" id="card-1">
+        <span class="badge" data-key="badge-skill">Recruitment Intelligence</span>
+        <h2 id="headline-1">SkillMatch AI.<br><em>Match applicant vectors.</em></h2>
+        <p id="desc-1">Analyzing CVs, decoding skill datasets, mapping interview capabilities, and projecting fit vectors onto corporate requirement spaces in real-time.</p>
+        <a href="https://skillmatch.sryverse.com" target="_blank" class="cta-btn" id="btn-1">Launch Product →</a>
+      </div>
+    </section>
+
+    <!-- Section 3: EstateMatch AI -->
+    <section id="section-2">
+      <div class="content-card card--estate" id="card-2">
+        <span class="badge" data-key="badge-estate">Real Estate Intelligence</span>
+        <h2 id="headline-2">EstateMatch AI.<br><em>Structural properties.</em></h2>
+        <p id="desc-2">Evolving property listings and customer demands into coordinates on a multi-dimensional matrix. Systematizing real estate searches and portfolios.</p>
+        <a href="https://estate.sryverse.com" target="_blank" class="cta-btn" id="btn-2">Launch Product →</a>
+      </div>
+    </section>
+
+    <!-- Section 4: Metraj AI -->
+    <section id="section-3">
+      <div class="content-card card--metraj" id="card-3">
+        <span class="badge" data-key="badge-metraj">AI Quantity Surveying</span>
+        <h2 id="headline-3">Metraj AI.<br><em>Auto calculation.</em></h2>
+        <p id="desc-3">Analyzing PDF, DWG files, and technical architectural blueprints. Instantly extracting construction metrics, material values, and cost calculations.</p>
+        <a href="https://metraj.sryverse.com" target="_blank" class="cta-btn" id="btn-3">Enter Private Beta →</a>
+      </div>
+    </section>
+
+    <!-- Section 5: Methodology -->
+    <section id="section-4">
+      <div class="content-card" id="card-4">
+        <span class="badge" data-key="badge-method">Methodology</span>
+        <h2 id="headline-4">From Complexity<br><em>to Clarity.</em></h2>
+        <p id="desc-4">We observe workflows, model variables, optimize performance, automate processes, and scale platforms. Building the operating system of the future.</p>
+        <a href="#" class="cta-btn" id="btn-4">Request Demo →</a>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="mobile-warning">
+    📱 3D camera spline animations configured for desktop. Mobile device renders flat fallback style.
+  </div>
+
+  <!-- CDN scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://unpkg.com/@studio-freight/lenis@1.0.34/dist/lenis.min.js"></script>
+
+  <!-- Application Logic -->
+  <script>
+    // --- 1. LOCALIZATION SYSTEM ---
+    const TRANSLATIONS = {
+      en: {
+        "badge-sry": "Operational Intelligence Layer",
+        "headline-0": "Intelligent Software.<br><em>Real Transformation.</em>",
+        "desc-0": "SRYVERSE designs high-performance autonomous networks connecting complex business metrics, operational logic, and decision vectors into beautiful, self-managing ecosystems.",
+        "btn-0": "Explore Ecosystem →",
+
+        "badge-skill": "Recruitment Intelligence",
+        "headline-1": "SkillMatch AI.<br><em>Match applicant vectors.</em>",
+        "desc-1": "Analyzing CVs, decoding skill datasets, mapping interview capabilities, and projecting fit vectors onto corporate requirement spaces in real-time.",
+        "btn-1": "Launch Product →",
+
+        "badge-estate": "Real Estate Intelligence",
+        "headline-2": "EstateMatch AI.<br><em>Structural properties.</em>",
+        "desc-2": "Evolving property listings and customer demands into coordinates on a multi-dimensional matrix. Systematizing real estate searches and portfolios.",
+        "btn-2": "Launch Product →",
+
+        "badge-metraj": "AI Quantity Surveying",
+        "headline-3": "Metraj AI.<br><em>Auto calculation.</em>",
+        "desc-3": "Analyzing PDF, DWG files, and technical architectural blueprints. Instantly extracting construction metrics, material values, and cost calculations.",
+        "btn-3": "Enter Private Beta →",
+
+        "badge-method": "Methodology",
+        "headline-4": "From Complexity<br><em>to Clarity.</em>",
+        "desc-4": "We observe workflows, model variables, optimize performance, automate processes, and scale platforms. Building the operating system of the future.",
+        "btn-4": "Request Demo →",
+
+        "scroll-text": "Scroll Down"
+      },
+      tr: {
+        "badge-sry": "Operasyonel Zeka Katmanı",
+        "headline-0": "Akıllı Yazılım.<br><em>Gerçek Dönüşüm.</em>",
+        "desc-0": "SRYVERSE, karmaşık iş metriklerini, operasyonel mantığı ve karar vektörlerini kendi kendini yöneten zengin ekosistemlere bağlayan yüksek performanslı otonom ağlar tasarlar.",
+        "btn-0": "Ekosistemi Keşfet →",
+
+        "badge-skill": "İşe Alım Zekası",
+        "headline-1": "SkillMatch AI.<br><em>Aday vektörlerini eşleştir.</em>",
+        "desc-1": "CV'leri analiz etme, yetenek veri kümelerini çözme, mülakat kabiliyetlerini haritalama ve uygunluk vektörlerini gerçek zamanlı olarak kurumsal gereksinim alanlarına yansıtma.",
+        "btn-1": "Ürünü Başlat →",
+
+        "badge-estate": "Gayrimenkul Zekası",
+        "headline-2": "EstateMatch AI.<br><em>Yapısal özellikler.</em>",
+        "desc-2": "Gayrimenkul portföylerini ve müşteri taleplerini çok boyutlu bir matris üzerindeki koordinatlara dönüştürme. Emlak aramalarını ve portföylerini sistematikleştirme.",
+        "btn-2": "Ürünü Başlat →",
+
+        "badge-metraj": "Yapay Zekâ Metraj Çıkarımı",
+        "headline-3": "Metraj AI.<br><em>Otomatik hesaplama.</em>",
+        "desc-3": "PDF, DWG dosyalarını ve teknik mimari çizimleri analiz etme. İnşaat metrajlarını, malzeme değerlerini ve maliyet hesaplamalarını saniyeler içinde çıkarma.",
+        "btn-3": "Özel Beta'ya Katıl →",
+
+        "badge-method": "Metodoloji",
+        "headline-4": "Karmaşıklıktan<br><em>Netliğe.</em>",
+        "desc-4": "İş akışlarını gözlemliyor, değişkenleri modelliyor, performansı optimize ediyor, süreçleri otomatize ediyor ve platformları ölçeklendiriyoruz. Geleceğin işletim sistemini kuruyoruz.",
+        "btn-4": "Demo Talep Et →",
+
+        "scroll-text": "Aşağı Kaydır"
+      }
+    };
+
+    let activeLang = 'en';
+
+    function setLanguage(lang) {
+      activeLang = lang;
+      document.getElementById('en-btn').classList.toggle('active', lang === 'en');
+      document.getElementById('tr-btn').classList.toggle('active', lang === 'tr');
+      
+      const dictionary = TRANSLATIONS[lang];
+      Object.keys(dictionary).forEach(key => {
+        const el = document.getElementById(key) || document.querySelector(`[data-key="${key}"]`);
+        if (el) {
+          if (el.tagName === 'A' || el.tagName === 'BUTTON' || el.id === 'scroll-text') {
+            el.textContent = dictionary[key];
+          } else {
+            el.innerHTML = dictionary[key];
+          }
+        }
+      });
+      
+      // Update header nav active index text (if we decide to localize nav names)
+      const navLinks = document.querySelectorAll('#main-nav a');
+      const navNames = lang === 'tr' ? ['Sryverse', 'SkillMatch AI', 'EstateMatch AI', 'Metraj AI', 'Metodoloji'] : ['Sryverse', 'SkillMatch AI', 'EstateMatch AI', 'Metraj AI', 'Methodology'];
+      navLinks.forEach((link, idx) => {
+        link.textContent = navNames[idx];
+      });
+    }
+
+    document.getElementById('en-btn').addEventListener('click', () => setLanguage('en'));
+    document.getElementById('tr-btn').addEventListener('click', () => setLanguage('tr'));
+
+    // --- 2. THREE.JS 3D SCENE SETUP ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    
+    // Camera
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight1.position.set(5, 10, 7);
+    scene.add(dirLight1);
+
+    const pointLight = new THREE.PointLight(0xe8c26f, 1.2, 50);
+    pointLight.position.set(0, 0, 5);
+    scene.add(pointLight);
+
+    // Group for entire interactive items
+    const sceneGroup = new THREE.Group();
+    scene.add(sceneGroup);
+
+    // Spline curve for camera path
+    const splinePoints = [
+      new THREE.Vector3(0, 0, 10),      // Sryverse Start
+      new THREE.Vector3(8, 2, -5),       // SkillMatch
+      new THREE.Vector3(-8, -4, -20),    // EstateMatch
+      new THREE.Vector3(6, 6, -35),      // Metraj AI
+      new THREE.Vector3(0, 0, -50)       // Methodology
+    ];
+    const cameraSpline = new THREE.CatmullRomCurve3(splinePoints);
+
+    // LookAt targets corresponding to each section
+    const lookAtTargets = [
+      new THREE.Vector3(0, 0, 0),        // Sryverse Core
+      new THREE.Vector3(8, 2, -15),      // SkillMatch Mesh
+      new THREE.Vector3(-8, -4, -30),    // EstateMatch Grid
+      new THREE.Vector3(6, 6, -45),      // Metraj Poly
+      new THREE.Vector3(0, 0, -60)       // Methodology
+    ];
+
+    // --- 3D GEOMETRIES FOR PRODUCTS ---
+    
+    // 1. Sryverse Core (Particle Mesh Sphere)
+    const sryGeo = new THREE.BufferGeometry();
+    const particleCount = 600;
+    const sryPos = new Float32Array(particleCount * 3);
+    for(let i=0; i<particleCount*3; i+=3) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = Math.cbrt(Math.random()) * 3.5; // Radius
+      sryPos[i] = r * Math.sin(phi) * Math.cos(theta);
+      sryPos[i+1] = r * Math.sin(phi) * Math.sin(theta);
+      sryPos[i+2] = r * Math.cos(phi);
+    }
+    sryGeo.setAttribute('position', new THREE.BufferAttribute(sryPos, 3));
+    const sryMat = new THREE.PointsMaterial({
+      size: 0.05,
+      color: 0x10b981,
+      transparent: true,
+      opacity: 0.8
+    });
+    const sryPoints = new THREE.Points(sryGeo, sryMat);
+    sryPoints.position.copy(lookAtTargets[0]);
+    sceneGroup.add(sryPoints);
+
+    // 2. SkillMatch AI (Connected Spheres)
+    const skillGroup = new THREE.Group();
+    skillGroup.position.copy(lookAtTargets[1]);
+    sceneGroup.add(skillGroup);
+
+    const nodesList = [];
+    const skillMat = new THREE.MeshPhongMaterial({ color: 0x34d399, emissive: 0x064e3b, shininess: 30 });
+    for(let i=0; i<12; i++) {
+      const geo = new THREE.SphereGeometry(0.25, 16, 16);
+      const mesh = new THREE.Mesh(geo, skillMat);
+      mesh.position.set(
+        (Math.random() - 0.5) * 4,
+        (Math.random() - 0.5) * 4,
+        (Math.random() - 0.5) * 4
+      );
+      skillGroup.add(mesh);
+      nodesList.push(mesh);
+    }
+
+    // Connect node spheres with line segments
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x10b981, opacity: 0.4, transparent: true });
+    const lineGeo = new THREE.BufferGeometry();
+    const linePositions = [];
+    for(let i=0; i<nodesList.length; i++) {
+      for(let j=i+1; j<nodesList.length; j++) {
+        if(nodesList[i].position.distanceTo(nodesList[j].position) < 2.5) {
+          linePositions.push(nodesList[i].position.x, nodesList[i].position.y, nodesList[i].position.z);
+          linePositions.push(nodesList[j].position.x, nodesList[j].position.y, nodesList[j].position.z);
+        }
+      }
+    }
+    lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+    const skillNetworkLines = new THREE.LineSegments(lineGeo, lineMat);
+    skillGroup.add(skillNetworkLines);
+
+    // 3. EstateMatch AI (Structured Wireframe Grid Structure)
+    const estateGroup = new THREE.Group();
+    estateGroup.position.copy(lookAtTargets[2]);
+    sceneGroup.add(estateGroup);
+
+    const gridBox = new THREE.BoxGeometry(4, 4, 4, 4, 4, 4);
+    const gridWire = new THREE.WireframeGeometry(gridBox);
+    const estateMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 1 });
+    const estateMesh = new THREE.LineSegments(gridWire, estateMat);
+    estateGroup.add(estateMesh);
+
+    // Inner glowing sphere
+    const innerGeo = new THREE.SphereGeometry(1.2, 16, 16);
+    const innerMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true, transparent: true, opacity: 0.3 });
+    const innerSphere = new THREE.Mesh(innerGeo, innerMat);
+    estateGroup.add(innerSphere);
+
+    // 4. Metraj AI (Gold Polyhedron Geometry)
+    const metrajGroup = new THREE.Group();
+    metrajGroup.position.copy(lookAtTargets[3]);
+    sceneGroup.add(metrajGroup);
+
+    const polyGeo = new THREE.IcosahedronGeometry(2, 1);
+    const polyWire = new THREE.WireframeGeometry(polyGeo);
+    const metrajMat = new THREE.LineBasicMaterial({ color: 0xe8c26f, linewidth: 2 });
+    const metrajMesh = new THREE.LineSegments(polyWire, metrajMat);
+    metrajGroup.add(metrajMesh);
+
+    const solidPolyMat = new THREE.MeshPhongMaterial({ color: 0xe8c26f, transparent: true, opacity: 0.15, flatShading: true });
+    const solidPoly = new THREE.Mesh(polyGeo, solidPolyMat);
+    metrajGroup.add(solidPoly);
+
+    // 5. Methodology (Complex torus ring)
+    const methodGroup = new THREE.Group();
+    methodGroup.position.copy(lookAtTargets[4]);
+    sceneGroup.add(methodGroup);
+
+    const torusGeo = new THREE.TorusKnotGeometry(1.8, 0.4, 120, 16);
+    const torusMat = new THREE.MeshPhongMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.5 });
+    const torusKnot = new THREE.Mesh(torusGeo, torusMat);
+    methodGroup.add(torusKnot);
+
+    // Helper: floaty space dust particles
+    const dustCount = 800;
+    const dustGeo = new THREE.BufferGeometry();
+    const dustPositions = new Float32Array(dustCount * 3);
+    for(let i=0; i<dustCount*3; i+=3) {
+      dustPositions[i] = (Math.random() - 0.5) * 40;
+      dustPositions[i+1] = (Math.random() - 0.5) * 40;
+      dustPositions[i+2] = (Math.random() - 0.5) * 100 - 40; // along path
+    }
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+    const dustMat = new THREE.PointsMaterial({ size: 0.04, color: 0xffffff, transparent: true, opacity: 0.3 });
+    const dust = new THREE.Points(dustGeo, dustMat);
+    scene.add(dust);
+
+
+    // --- 4. SCROLL KINETIC ENGINE (GSAP + LENIS) ---
+    
+    // Initialize Lenis
+    const lenis = new Lenis({
+      duration: 1.4,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      smoothTouch: false,
+      touchMultiplier: 2,
+      infinite: false,
+    });
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+
+    // GSAP ScrollTrigger Integration
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Global scroll progress proxy object
+    const scrollProxy = { progress: 0 };
+
+    // Spline curve interpolation logic based on scroll progress
+    function updateCamera(progress) {
+      // 1. Get position along CatmullRom spline path (from 0 to 1)
+      const camPos = cameraSpline.getPointAt(progress);
+      camera.position.copy(camPos);
+
+      // 2. Interpolate lookAt target smoothly based on spline segment
+      // We divide the progress range [0, 1] into 4 segments corresponding to the sections
+      const segmentCount = lookAtTargets.length - 1;
+      const rawIndex = progress * segmentCount;
+      const startIndex = Math.floor(rawIndex);
+      const endIndex = Math.min(startIndex + 1, segmentCount);
+      const localProgress = rawIndex - startIndex;
+
+      const currentLookAt = new THREE.Vector3().copy(lookAtTargets[startIndex]);
+      const nextLookAt = lookAtTargets[endIndex];
+      currentLookAt.lerp(nextLookAt, localProgress);
+
+      camera.lookAt(currentLookAt);
+      
+      // Let point light float near camera for neon vibe
+      pointLight.position.copy(camPos).add(new THREE.Vector3(0, 0, -2));
+    }
+
+    // Initialize camera position
+    updateCamera(0);
+
+    // Create GSAP animation bound to body scroll
+    const scrollTimeline = gsap.timeline({
+      scrollTrigger: {
+        trigger: ".scroll-container",
+        start: "top top",
+        end: "bottom bottom",
+        scrub: 1.2, // smoothing factor
+        onUpdate: (self) => {
+          scrollProxy.progress = self.progress;
+          updateCamera(self.progress);
+          updateActiveSection(self.progress);
+        }
+      }
+    });
+
+    // Animate DOM overlays with fades
+    const sectionsCount = 5;
+    for(let i = 0; i < sectionsCount; i++) {
+      // Fade in/out card animations
+      gsap.to(`#card-${i}`, {
+        scrollTrigger: {
+          trigger: `#section-${i}`,
+          start: "top center",
+          end: "bottom center",
+          toggleClass: { targets: `#card-${i}`, className: "visible" },
+          scrub: false
+        }
+      });
+    }
+
+    // Update active index based on scroll segment
+    function updateActiveSection(progress) {
+      const segmentCount = sectionsCount - 1;
+      const activeIdx = Math.round(progress * segmentCount);
+      
+      // Update Navigation links
+      document.querySelectorAll('#main-nav a').forEach((link, idx) => {
+        link.classList.toggle('active', idx === activeIdx);
+      });
+
+      // Update Left Tracker dots
+      document.querySelectorAll('.progress-tracker .tracker-dot').forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === activeIdx);
+      });
+    }
+
+    // --- 5. INTERACTIVE NAV CLICKS ---
+    
+    // Navigation link clicks
+    document.querySelectorAll('#main-nav a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const index = parseInt(link.getAttribute('data-index'));
+        scrollToSection(index);
+      });
+    });
+
+    // Left progress dot clicks
+    document.querySelectorAll('.progress-tracker .tracker-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        const index = parseInt(dot.getAttribute('data-index'));
+        scrollToSection(index);
+      });
+    });
+
+    function scrollToSection(index) {
+      const targetSection = document.getElementById(`section-${index}`);
+      if(targetSection) {
+        lenis.scrollTo(targetSection, {
+          duration: 1.8,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+        });
+      }
+    }
+
+    // --- 6. INTERACTION & ANIMATION LOOP ---
+    
+    // Mouse movement interaction (gently rotate groups)
+    const mouse = { x: 0, y: 0 };
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = (e.clientX / window.innerWidth) - 0.5;
+      mouse.y = (e.clientY / window.innerHeight) - 0.5;
+      
+      // Gentle parallax effect on the whole scene group
+      gsap.to(sceneGroup.rotation, {
+        y: mouse.x * 0.15,
+        x: mouse.y * 0.15,
+        duration: 2,
+        ease: "power2.out"
+      });
+    });
+
+    // Render loop
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const elapsedTime = clock.getElapsedTime();
+
+      // Spin abstract product shapes
+      sryPoints.rotation.y = elapsedTime * 0.08;
+      sryPoints.rotation.x = Math.sin(elapsedTime * 0.2) * 0.1;
+
+      skillGroup.rotation.y = elapsedTime * 0.12;
+      // Animate node spheres floating slightly
+      nodesList.forEach((node, idx) => {
+        node.position.y += Math.sin(elapsedTime * 1.5 + idx) * 0.003;
+      });
+
+      estateGroup.rotation.y = elapsedTime * 0.05;
+      estateGroup.rotation.x = elapsedTime * 0.03;
+      innerSphere.rotation.y = -elapsedTime * 0.1;
+
+      metrajGroup.rotation.y = elapsedTime * 0.15;
+      metrajGroup.rotation.z = Math.sin(elapsedTime * 0.5) * 0.2;
+
+      torusKnot.rotation.y = elapsedTime * 0.2;
+      torusKnot.rotation.x = elapsedTime * 0.1;
+
+      // Animate space dust slowly drifting
+      dust.rotation.y = elapsedTime * 0.01;
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Window resize handler
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+  </script>
+</body>
+</html>
