@@ -43,3 +43,29 @@ kontrol etmende fayda var.
 ## Dosya yoksa ne oluyor?
 
 Sayfa kırılmaz — o sekmede animasyonlu bir yer tutucu görünür.
+
+---
+
+# SkillMatch AI ekranları
+
+SkillMatch detay sayfası için **henüz görsel yok**. Aşağıdaki dosyaları
+bu klasöre koyunca tur bölümü otomatik canlanır.
+
+| Dosya | Ekran |
+|---|---|
+| `skill-dashboard.png` | Panel — açık pozisyonlar, işe alım hunisi |
+| `skill-positions.png` | Pozisyonlar listesi |
+| `skill-pool.png` | Aday havuzu |
+| `skill-cv.png` | CV analizi / ayrıştırma |
+| `skill-match.png` | AI eşleştirme — uyum puanı ve gerekçe |
+| `skill-pipeline.png` | İşe alım akışı (Kanban) |
+| `skill-interview.png` | Mülakat & takvim |
+| `skill-reports.png` | Raporlar |
+
+Sıra ve açıklamalar `src/SkillMatchPage.jsx` içindeki `SCREENS` dizisinde.
+
+**Önemli:** İçerik gerçek panele göre tahmin edilerek yazıldı. Görselleri
+ekledikten sonra modül adlarını ve açıklamaları gerçeğe göre düzeltmemi
+söylemen yeterli.
+
+Aday isim/telefon/e-postalarının demo veri olduğundan emin ol.

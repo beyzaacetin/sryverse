@@ -326,7 +326,12 @@ export default function App() {
       {page === 'vision' ? (
         <VisionPage />
       ) : page === 'skillmatch' ? (
-        <SkillMatchPage goBack={() => setPage('home')} />
+        <SkillMatchPage
+          goBack={() => setPage('home')}
+          onDemo={() => { setPage('home'); requestAnimationFrame(() => requestAnimationFrame(() => {
+            document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })
+          })) }}
+        />
       ) : page === 'estatematch' ? (
         <EstateMatchPage
           goBack={() => setPage('home')}

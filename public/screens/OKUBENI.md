@@ -43,3 +43,36 @@ kontrol etmende fayda var.
 ## Dosya yoksa ne oluyor?
 
 Sayfa kırılmaz — o sekmede animasyonlu bir yer tutucu görünür.
+
+---
+
+# SkillMatch AI ekranları
+
+| Dosya | Ekran |
+|---|---|
+| `skill-dashboard.png` | Genel Bakış — aktif pozisyonlar, günün programı, AI asistan |
+| `skill-workforce.png` | Kadro İhtiyaçları — FTE açığı, bütçe, aksiyon planı |
+| `skill-wizard.png` | Pozisyon Açma — 6 adımlı akış |
+| `skill-positions.png` | Pozisyon Yönetimi — açık kadrolar ve pipeline |
+| `skill-pool.png` | Aday Havuzu — yetkinlikler ve AI uyum oranı |
+| `skill-profile.png` | Aday Profili — özet, yetkinlik haritası, AI mesaj taslakları |
+
+Sıra ve açıklamalar `src/SkillMatchPage.jsx` içindeki `SCREENS` dizisinde.
+
+## ⚠️ Bu görsellerde gerçek kişisel veri var
+
+`skill-pool.png` ve `skill-profile.png` içinde **gerçek görünen aday
+isimleri, e-posta adresleri ve telefon numaraları** bulunuyor:
+
+- Aday havuzunda tam ad + gmail adresleri (10+ kişi)
+- Aday profilinde ad, e-posta ve cep telefonu birlikte
+
+Bu sayfa yayına gidecek. Yayın öncesi bu iki görseli demo veriyle
+yeniden alman ya da kişisel alanları bulanıklaştırman gerekiyor —
+istersen bulanıklaştırmayı ben yapabilirim.
+
+Diğer dört ekranda kişisel veri görünmüyor.
+
+## Optimizasyon
+
+1600px genişlik, 200 renkli palet: 1.37 MB → 667 KB.

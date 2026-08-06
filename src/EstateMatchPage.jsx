@@ -1,62 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import EstateMatch3D from './EstateMatch3D.jsx'
-import './EstatePage.css'
-
-/* Scroll ile beliren sarmalayici */
-function Rev({ children, delay = 0 }) {
-  const ref = useRef(null)
-  const [on, setOn] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const io = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) { setOn(true); io.disconnect() }
-    }, { threshold: 0.15 })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
-  return (
-    <div ref={ref} className={`erev${on ? ' erev--on' : ''}`} style={{ transitionDelay: `${delay}ms` }}>
-      {children}
-    </div>
-  )
-}
-
-/* Gorunurken sayarak yukselen deger */
-function Count({ value }) {
-  const ref = useRef(null)
-  const [shown, setShown] = useState(value)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const m = String(value).match(/^(\D*)([\d.,]+)(.*)$/s)
-    if (!m || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    const [, pre, numRaw, post] = m
-    const decimals = numRaw.includes('.') ? (numRaw.split('.')[1] || '').length : 0
-    const target = parseFloat(numRaw.replace(/,/g, ''))
-    if (!isFinite(target)) return
-
-    let raf = 0, start = 0
-    const io = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return
-      io.disconnect()
-      const step = (ts) => {
-        if (!start) start = ts
-        const p = Math.min(1, (ts - start) / 1300)
-        const v = target * (1 - Math.pow(1 - p, 3))
-        setShown(pre + v.toFixed(decimals) + post)
-        if (p < 1) raf = requestAnimationFrame(step)
-      }
-      raf = requestAnimationFrame(step)
-    }, { threshold: 0.5 })
-    io.observe(el)
-    return () => { io.disconnect(); if (raf) cancelAnimationFrame(raf) }
-  }, [value])
-
-  return <span ref={ref}>{shown}</span>
-}
+import { Rev, Count, ScreenTour, Faq, RoiCalc } from './pageParts.jsx'
+import './ProductPage.css'
 
 /* ── Ekran turu ── */
 const SCREENS = [
@@ -69,110 +14,7 @@ const SCREENS = [
   { key: 'calendar',  n: '07', t: 'Takvim & Takip', d: 'Randevular, gösterimler ve AI önerili takip aramaları.', icon: '◷' },
   { key: 'generator', n: '08', t: 'İlan Üreteci',   d: 'Portföyden seçin, AI ile Sahibinden / Instagram / WhatsApp metni üretin.', icon: '✎' },
   { key: 'reports',   n: '09', t: 'Raporlar',       d: 'Ciro, satış hunisi, dönüşüm ve danışman performansı.', icon: '◲' },
-]
-
-const PER_PAGE = 3
-const PAGES = Math.ceil(SCREENS.length / PER_PAGE)
-
-function ScreenTour() {
-  const [active, setActive] = useState(0)
-  const [failed, setFailed] = useState(() => new Set())
-  const s = SCREENS[active]
-  const missing = failed.has(s.key)
-
-  // Aktif ekranın bulunduğu sayfa
-  const page = Math.floor(active / PER_PAGE)
-
-  // Sayfa değiştir: o sayfanın ilk ekranını seç
-  const goPage = useCallback((p) => {
-    const next = ((p % PAGES) + PAGES) % PAGES
-    setActive(next * PER_PAGE)
-  }, [])
-
-  const prev = useCallback(() => {
-    setActive(a => (a - 1 + SCREENS.length) % SCREENS.length)
-  }, [])
-  const next = useCallback(() => {
-    setActive(a => (a + 1) % SCREENS.length)
-  }, [])
-
-  return (
-    <div className="etour">
-      <div className="etour__nav">
-        <div className="etour__viewport">
-          <div className="etour__track" style={{ transform: `translateX(-${page * 100}%)` }}>
-            {Array.from({ length: PAGES }, (_, p) => (
-              <div className="etour__page" key={p}>
-                {SCREENS.slice(p * PER_PAGE, p * PER_PAGE + PER_PAGE).map((x) => {
-                  const i = SCREENS.indexOf(x)
-                  return (
-                    <button
-                      key={x.key}
-                      className={`etour__btn${i === active ? ' etour__btn--on' : ''}`}
-                      onClick={() => setActive(i)}
-                      aria-current={i === active}
-                      tabIndex={p === page ? 0 : -1}
-                    >
-                      <span className="etour__n">{x.n}</span>
-                      <span className="etour__t">{x.t}</span>
-                      <span className="etour__d">{x.d}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="etour__ctrl">
-          <button className="etour__arrow" onClick={prev} aria-label="Önceki ekran">‹</button>
-          <div className="etour__dots">
-            {Array.from({ length: PAGES }, (_, p) => (
-              <button
-                key={p}
-                className={`etour__dot${p === page ? ' etour__dot--on' : ''}`}
-                onClick={() => goPage(p)}
-                aria-label={`${p + 1}. grup`}
-              />
-            ))}
-          </div>
-          <span className="etour__count">
-            {String(active + 1).padStart(2, '0')} / {String(SCREENS.length).padStart(2, '0')}
-          </span>
-          <button className="etour__arrow" onClick={next} aria-label="Sonraki ekran">›</button>
-        </div>
-      </div>
-
-      <div className="eshot">
-        <div className="eshot__bar">
-          <span className="eshot__dot" /><span className="eshot__dot" /><span className="eshot__dot" />
-          <span className="eshot__url">estate.sryverse.com — {s.t}</span>
-        </div>
-        <div className="eshot__frame">
-          {!missing && (
-            <img
-              key={s.key}
-              className="eshot__img"
-              src={`/screens/${s.key}.png`}
-              alt={`EstateMatch AI — ${s.t} ekranı`}
-              loading="lazy"
-              onError={() => setFailed(prev => new Set(prev).add(s.key))}
-            />
-          )}
-          {missing && (
-            <div className="eshot__ph">
-              <div className="eshot__phgrid" />
-              <div className="eshot__phscan" />
-              <span className="eshot__phicon">{s.icon}</span>
-              <span className="eshot__phtitle">{s.t}</span>
-              <span className="eshot__phnote">Ekran görüntüsü yakında</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
+].map(s => ({ ...s, src: `/screens/${s.key}.png` }))
 
 /* ── Moduller ── */
 const MODULES = [
@@ -230,6 +72,20 @@ const PLANS = [
   },
 ]
 
+/* ── ROI ── */
+const ROI_FIELDS = [
+  { key: 'consultants', label: 'Danışman sayısı',                min: 1,   max: 80,   step: 1 },
+  { key: 'leads',       label: 'Danışman başına aylık talep',    min: 5,   max: 150,  step: 1 },
+  { key: 'minutes',     label: 'Eşleştirme süresi',              min: 10,  max: 240,  step: 5, unit: ' dk' },
+  { key: 'hourly',      label: 'Danışmanın saatlik değeri',      min: 100, max: 2000, step: 50, prefix: '₺' },
+]
+
+function computeRoi({ consultants, leads, minutes, hourly }) {
+  const hours = Math.round((consultants * leads * minutes) / 60)
+  const monthly = hours * hourly
+  return { hours, monthly, yearly: monthly * 12, days: Math.round(hours / 8) }
+}
+
 /* ── SSS ── */
 const FAQS = [
   { q: 'Mevcut portföyümüzü sisteme nasıl aktarırız?',
@@ -245,75 +101,6 @@ const FAQS = [
   { q: 'AI kullanımı maliyeti nasıl kontrol ediliyor?',
     a: 'Ön eleme ve önbellekleme sayesinde her sorgu yapay zekâya gitmez. Paketlerde aylık token limiti tanımlıdır; kullanım paneliden şeffaf biçimde izlenir.' },
 ]
-
-function Faq({ q, a, open, onToggle }) {
-  return (
-    <div className={`efaq${open ? ' efaq--on' : ''}`}>
-      <button className="efaq__q" onClick={onToggle} aria-expanded={open}>
-        {q}
-        <span className="efaq__ico" />
-      </button>
-      <div className="efaq__a"><p>{a}</p></div>
-    </div>
-  )
-}
-
-const TRY = new Intl.NumberFormat('tr-TR')
-
-/* ── ROI ── */
-function Roi() {
-  const [consultants, setConsultants] = useState(10)
-  const [leads, setLeads] = useState(30)
-  const [minutes, setMinutes] = useState(120)
-  const [hourly, setHourly] = useState(400)
-
-  const savedHours = Math.round((consultants * leads * minutes) / 60)
-  const monthly = savedHours * hourly
-  const yearly = monthly * 12
-  const days = Math.round(savedHours / 8)
-
-  return (
-    <div className="eroi">
-      <div className="eroi__ctrls">
-        <div className="eroi__f">
-          <label>Danışman sayısı <b>{consultants}</b></label>
-          <input type="range" min="1" max="80" value={consultants} onChange={e => setConsultants(+e.target.value)} />
-        </div>
-        <div className="eroi__f">
-          <label>Danışman başına aylık talep <b>{leads}</b></label>
-          <input type="range" min="5" max="150" value={leads} onChange={e => setLeads(+e.target.value)} />
-        </div>
-        <div className="eroi__f">
-          <label>Eşleştirme süresi <b>{minutes} dk</b></label>
-          <input type="range" min="10" max="240" step="5" value={minutes} onChange={e => setMinutes(+e.target.value)} />
-        </div>
-        <div className="eroi__f">
-          <label>Danışmanın saatlik değeri <b>₺{TRY.format(hourly)}</b></label>
-          <input type="range" min="100" max="2000" step="50" value={hourly} onChange={e => setHourly(+e.target.value)} />
-        </div>
-      </div>
-
-      <div className="eroi__out">
-        <span className="eroi__lbl">Aylık tahmini zaman kazanımı</span>
-        <div className="eroi__big">{TRY.format(savedHours)} saat</div>
-        <p className="eroi__sub">≈ ₺{TRY.format(monthly)} değerinde zaman</p>
-        <div className="eroi__div" />
-        <div className="eroi__row">
-          <span className="eroi__lbl">Yıllık karşılığı</span>
-          <span className="eroi__rv">₺{TRY.format(yearly)}</span>
-        </div>
-        <div className="eroi__row">
-          <span className="eroi__lbl">İş günü / ay</span>
-          <span className="eroi__rv">{TRY.format(days)} gün</span>
-        </div>
-        <p className="eroi__note">
-          Hesaplama yalnızca portföy arama süresini temel alır; takip, ilan üretimi, raporlama ve
-          iletişim kazanımları dahil değildir.
-        </p>
-      </div>
-    </div>
-  )
-}
 
 /* ══════════════ SAYFA ══════════════ */
 export default function EstateMatchPage({ goBack, onDemo }) {
@@ -346,7 +133,7 @@ export default function EstateMatchPage({ goBack, onDemo }) {
   }, [onDemo, goBack])
 
   return (
-    <main className="epage">
+    <main className="epage epage--estate">
       <div className="epage__progress" style={{ width: `${progress}%` }} />
 
       {/* ── HERO ── */}
@@ -405,7 +192,13 @@ export default function EstateMatchPage({ goBack, onDemo }) {
               </p>
             </div>
           </Rev>
-          <Rev delay={100}><ScreenTour /></Rev>
+          <Rev delay={100}>
+            <ScreenTour
+              screens={SCREENS}
+              domain="estate.sryverse.com"
+              product="EstateMatch AI"
+            />
+          </Rev>
         </div>
       </section>
 
@@ -447,7 +240,14 @@ export default function EstateMatchPage({ goBack, onDemo }) {
               </p>
             </div>
           </Rev>
-          <Rev delay={100}><Roi /></Rev>
+          <Rev delay={100}>
+            <RoiCalc
+              fields={ROI_FIELDS}
+              initial={{ consultants: 10, leads: 30, minutes: 120, hourly: 400 }}
+              compute={computeRoi}
+              note="Hesaplama yalnızca portföy arama süresini temel alır; takip, ilan üretimi, raporlama ve iletişim kazanımları dahil değildir."
+            />
+          </Rev>
         </div>
       </section>
 

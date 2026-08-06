@@ -13,6 +13,7 @@ const PRODUCTS = [
     category: 'Recruitment Intelligence',
     desc: 'İşe alım süreçlerindeki karmaşıklığı çözen AI platformu — CV analizi, darboğaz tespiti ve aday eşleştirme.',
     url: 'https://skillmatch.sryverse.com',
+    page: 'skillmatch',       // detay sayfası
     rgb: '52, 211, 153',      // zümrüt
     Story: SkillStory,
   },
