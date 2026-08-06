@@ -66,7 +66,7 @@
 .prcard {
   position: relative;
   border-radius: 16px;
-  padding: 18px 20px;
+  padding: 20px 22px;
   background: rgba(5, 18, 13, .92);
   border: 1px solid rgba(29, 107, 82, .25);
   overflow: hidden;
@@ -88,19 +88,19 @@
 
 /* Pasif (henüz sırası gelmemiş / geçilmiş) kart */
 .prcard--idle {
-  opacity: .38;
-  transform: scale(.9) translateX(-10px);
-  filter: saturate(.5);
+  opacity: .72;
+  transform: scale(.97) translateX(-4px);
+  filter: saturate(.72);
 }
 .prcard--done {
-  opacity: .5;
-  transform: scale(.92) translateX(-6px);
+  opacity: .78;
+  transform: scale(.975) translateX(-3px);
 }
 
 /* Aktif kart — öne çıkar */
 .prcard--on {
   opacity: 1;
-  transform: scale(1) translateX(0);
+  transform: scale(1.01) translateX(0);
   border-color: rgba(var(--pc), .5);
   box-shadow: 0 22px 55px rgba(var(--pc), .22);
   padding: 22px 22px 20px;
@@ -131,36 +131,36 @@
 
 .prcard__name {
   font-family: var(--fs);
-  font-size: 1.42rem;
+  font-size: 1.62rem;
   font-weight: 400;
   color: #fff;
   letter-spacing: -.02em;
   line-height: 1.1;
   transition: font-size .45s ease;
 }
-.prcard--on .prcard__name { font-size: 1.62rem; }
+.prcard--on .prcard__name { font-size: 1.82rem; }
 
 .prcard__cat {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: .09em;
+  letter-spacing: .085em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, .4);
+  color: rgba(255, 255, 255, .58);
   font-family: var(--fm);
 }
 
 /* Aktif kartta açılan kısa açıklama */
 .prcard__desc {
-  font-size: 12.5px;
-  color: rgba(255, 255, 255, .58);
-  line-height: 1.65;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, .72);
+  line-height: 1.7;
   max-height: 0;
   opacity: 0;
   overflow: hidden;
   transition: max-height .5s cubic-bezier(.4, 0, .2, 1), opacity .4s ease, margin .4s ease;
 }
 .prcard--on .prcard__desc {
-  max-height: 96px;
+  max-height: 130px;
   opacity: 1;
   margin-top: 2px;
 }
@@ -187,16 +187,16 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, .72);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, .88);
   margin-top: 8px;
   max-height: 0;
   opacity: 0;
   overflow: hidden;
   transition: max-height .45s ease, opacity .35s ease;
 }
-.prcard--on .prcard__cta { max-height: 30px; opacity: 1; }
+.prcard--on .prcard__cta { max-height: 32px; opacity: 1; }
 .prcard__cta span { transition: transform .2s; }
 .prcard:hover .prcard__cta span { transform: translateX(3px); }
 
@@ -1059,15 +1059,17 @@
   .prail__spine { display: none; }
   .prcard {
     flex: 0 0 auto;
-    min-width: 150px;
-    padding: .7rem .95rem;
+    min-width: 166px;
+    padding: .8rem 1.05rem;
     transform: none !important;
     scale: 1 !important;
+    opacity: .8;
   }
-  .prcard--on { padding: .7rem .95rem; }
+  .prcard--on { padding: .8rem 1.05rem; opacity: 1; }
   .prcard__desc, .prcard__cta, .prcard__canvas { display: none; }
-  .prcard__name { font-size: 1.02rem; }
-  .prcard--on .prcard__name { font-size: 1.02rem; }
+  .prcard__name { font-size: 1.15rem; }
+  .prcard--on .prcard__name { font-size: 1.15rem; }
+  .prcard__cat { font-size: 10px; }
   .pmetrics, .pprobs { grid-template-columns: 1fr; }
   .pmatch, .proi, .ptrust { grid-template-columns: 1fr; }
   .pflow { grid-template-columns: 1fr; }
@@ -1177,7 +1179,7 @@
     perspective(900px)
     rotateX(var(--tilt-x))
     rotateY(var(--tilt-y))
-    scale(1) translateX(0);
+    scale(1.01) translateX(0);
   transition:
     transform .35s cubic-bezier(.2, .8, .2, 1),
     opacity .45s ease,
