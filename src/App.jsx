@@ -328,7 +328,12 @@ export default function App() {
       ) : page === 'skillmatch' ? (
         <SkillMatchPage goBack={() => setPage('home')} />
       ) : page === 'estatematch' ? (
-        <EstateMatchPage goBack={() => setPage('home')} />
+        <EstateMatchPage
+          goBack={() => setPage('home')}
+          onDemo={() => { setPage('home'); requestAnimationFrame(() => requestAnimationFrame(() => {
+            document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })
+          })) }}
+        />
       ) : (
       <main>
 
@@ -365,7 +370,7 @@ export default function App() {
         <LiveTicker />
 
         {/* PRODUCTS — scroll güdümlü kart rafı + akan tanıtım */}
-        <ProductShowcase onDemo={() => go('#contact')} />
+        <ProductShowcase onDemo={() => go('#contact')} onOpenPage={(key) => setPage(key)} />
 
         {/* METHODOLOGY */}
         <section className="sec sec--tint" id="methodology">
