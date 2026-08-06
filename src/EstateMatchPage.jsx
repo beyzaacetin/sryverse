@@ -71,27 +71,76 @@ const SCREENS = [
   { key: 'reports',   n: '09', t: 'Raporlar',       d: 'Ciro, satış hunisi, dönüşüm ve danışman performansı.', icon: '◲' },
 ]
 
+const PER_PAGE = 3
+const PAGES = Math.ceil(SCREENS.length / PER_PAGE)
+
 function ScreenTour() {
   const [active, setActive] = useState(0)
   const [failed, setFailed] = useState(() => new Set())
   const s = SCREENS[active]
   const missing = failed.has(s.key)
 
+  // Aktif ekranın bulunduğu sayfa
+  const page = Math.floor(active / PER_PAGE)
+
+  // Sayfa değiştir: o sayfanın ilk ekranını seç
+  const goPage = useCallback((p) => {
+    const next = ((p % PAGES) + PAGES) % PAGES
+    setActive(next * PER_PAGE)
+  }, [])
+
+  const prev = useCallback(() => {
+    setActive(a => (a - 1 + SCREENS.length) % SCREENS.length)
+  }, [])
+  const next = useCallback(() => {
+    setActive(a => (a + 1) % SCREENS.length)
+  }, [])
+
   return (
     <div className="etour">
-      <div className="etour__list">
-        {SCREENS.map((x, i) => (
-          <button
-            key={x.key}
-            className={`etour__btn${i === active ? ' etour__btn--on' : ''}`}
-            onClick={() => setActive(i)}
-            aria-current={i === active}
-          >
-            <span className="etour__n">{x.n}</span>
-            <span className="etour__t">{x.t}</span>
-            <span className="etour__d">{x.d}</span>
-          </button>
-        ))}
+      <div className="etour__nav">
+        <div className="etour__viewport">
+          <div className="etour__track" style={{ transform: `translateX(-${page * 100}%)` }}>
+            {Array.from({ length: PAGES }, (_, p) => (
+              <div className="etour__page" key={p}>
+                {SCREENS.slice(p * PER_PAGE, p * PER_PAGE + PER_PAGE).map((x) => {
+                  const i = SCREENS.indexOf(x)
+                  return (
+                    <button
+                      key={x.key}
+                      className={`etour__btn${i === active ? ' etour__btn--on' : ''}`}
+                      onClick={() => setActive(i)}
+                      aria-current={i === active}
+                      tabIndex={p === page ? 0 : -1}
+                    >
+                      <span className="etour__n">{x.n}</span>
+                      <span className="etour__t">{x.t}</span>
+                      <span className="etour__d">{x.d}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="etour__ctrl">
+          <button className="etour__arrow" onClick={prev} aria-label="Önceki ekran">‹</button>
+          <div className="etour__dots">
+            {Array.from({ length: PAGES }, (_, p) => (
+              <button
+                key={p}
+                className={`etour__dot${p === page ? ' etour__dot--on' : ''}`}
+                onClick={() => goPage(p)}
+                aria-label={`${p + 1}. grup`}
+              />
+            ))}
+          </div>
+          <span className="etour__count">
+            {String(active + 1).padStart(2, '0')} / {String(SCREENS.length).padStart(2, '0')}
+          </span>
+          <button className="etour__arrow" onClick={next} aria-label="Sonraki ekran">›</button>
+        </div>
       </div>
 
       <div className="eshot">

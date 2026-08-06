@@ -2,36 +2,44 @@
 
 EstateMatch detay sayfasındaki "Ürün turu" bölümü bu klasördeki görselleri kullanır.
 
-## Gereken dosyalar
+## Mevcut dosyalar
 
-| Dosya adı | Hangi ekran |
+| Dosya | Ekran |
 |---|---|
-| `dashboard.png` | Genel bakış — bugünün fırsatları |
-| `portfolio.png` | Portföy listesi / kartları |
-| `match.png` | Eşleştirme skoru + gerekçe |
-| `assistant.png` | AI asistan sohbeti |
-| `reports.png` | Gelir / dönüşüm raporu |
+| `dashboard.png` | Panel — metrikler, aktivite trendi, AI öngörüleri |
+| `portfolio.png` | Portföy — ilan kartları, AI skorları |
+| `import.png` | İlan aktarımı — Sahibinden / Hürriyet Emlak / Emlakjet |
+| `listing.png` | İlan detayı — nitelikler + eşleşen müşteriler |
+| `match.png` | Müşteri detayı — dönüşüm, risk, AI eşleşme skoru |
+| `pipeline.png` | İş akışı — Kanban satış hunisi |
+| `calendar.png` | Takvim — randevular ve takip araması |
+| `generator.png` | İlan üreteci — AI ile çoklu mecra içeriği |
+| `reports.png` | Raporlar — ciro, huni, danışman performansı |
 
-Dosya adları **birebir** bu şekilde olmalı (küçük harf, `.png`).
+Sıra ve açıklamalar `src/EstateMatchPage.jsx` içindeki `SCREENS` dizisinde tanımlı.
 
-## Önemli — görsel almadan önce
+## Görselleri değiştirmek
 
-Bu sayfa yayına gidecek. Ekran görüntüsü almadan önce:
+Aynı dosya adıyla üzerine yaz, sayfayı yenile. Dosya adları birebir eşleşmeli.
 
-- Gerçek müşteri **isim, telefon ve e-postalarını** demo veriyle değiştir
-- Gerçek portföy adresleri hassassa onları da değiştir
-- Danışman isimleri gerçekse gözden geçir
+Yeni ekran eklemek için `SCREENS` dizisine bir satır ekle ve görseli
+`<key>.png` adıyla bu klasöre koy.
 
-Bir kez yayınlanınca geri alsan bile arama motorlarında kalabilir.
+## Optimizasyon
 
-## Teknik
+Görseller 1600px genişliğe ölçeklenip 200 renkli palete indirildi
+(3.2 MB → 939 KB). Yeni görsel eklerken benzer bir optimizasyon iyi olur;
+istersen bunu ben yapabilirim.
 
-- Format: PNG
-- Genişlik: 1600–2000px ideal
-- Oran: 16:10 civarı en iyi oturur (çerçeve bu orana göre kırpar)
-- Dosya başına 500 KB'ı geçerse optimize edilmesi iyi olur
+## Gizlilik notu
+
+Bu görseller yayına gidiyor. Yeni görsel eklerken gerçek müşteri
+isim/telefon/e-postalarının demo veri olduğundan emin ol.
+
+Mevcut görsellerde "Demo Gayrimenkul" hesabı kullanılmış; yine de
+`match.png` ve `pipeline.png` içinde görünen telefon numaralarını
+kontrol etmende fayda var.
 
 ## Dosya yoksa ne oluyor?
 
-Sayfa kırılmaz. Görsel bulunamazsa o sekmede animasyonlu bir yer tutucu
-("Ekran görüntüsü yakında") görünür. Dosyayı ekleyip sayfayı yenilemen yeterli.
+Sayfa kırılmaz — o sekmede animasyonlu bir yer tutucu görünür.
