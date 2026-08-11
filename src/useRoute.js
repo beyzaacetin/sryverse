@@ -43,28 +43,8 @@ function pageFromLocation() {
   return ROUTES[seg] || 'home'
 }
 
-/**
- * GitHub Pages gibi sunucu yonlendirmesi yapamayan ortamlarda 404.html
- * istenen adresi sessionStorage'a yazip koke atar. Uygulama acilir
- * acilmaz o adresi geri yukluyoruz.
- */
-function consumeRedirect() {
-  try {
-    const saved = sessionStorage.getItem('sry:redirect')
-    if (!saved) return null
-    sessionStorage.removeItem('sry:redirect')
-    window.history.replaceState({}, '', saved)
-    return true
-  } catch {
-    return null
-  }
-}
-
 export default function useRoute() {
-  const [page, setPageState] = useState(() => {
-    consumeRedirect()
-    return pageFromLocation()
-  })
+  const [page, setPageState] = useState(pageFromLocation)
 
   // Geri/ileri tuslari
   useEffect(() => {
